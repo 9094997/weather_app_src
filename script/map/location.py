@@ -7,6 +7,10 @@ from shapely.geometry import Point, box
 import geopandas as gpd
 import requests
 from pathlib import Path
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut, GeocoderServiceError
+import time
+from tqdm import tqdm
 
 def download_world_data():
     """Download the world countries shapefile"""
@@ -29,15 +33,49 @@ def download_world_data():
     print("Data downloaded and extracted successfully")
     return data_dir / "ne_110m_admin_0_countries.shp"
 
+
+
+def get_location_name(lat, lon, geolocator):
+    """Get location name for given coordinates"""
+    try:
+        time.sleep(0.5)  # Rate limiting 
+        location = geolocator.reverse((lat, lon), language='en')
+        
+        if location and location.raw.get('address'):
+            address = location.raw['address']
+            
+            # Try to get the most relevant name
+            name_components = [
+                address.get('suburb'),
+                address.get('city'),
+                address.get('town'),
+                address.get('village'),
+                address.get('county'),
+                address.get('state_district'),
+                address.get('state')
+            ]
+            
+            # Use the first non-None value
+            return next((name for name in name_components if name), 'Unknown')
+            
+    except (GeocoderTimedOut, GeocoderServiceError) as e:
+        print(f"Error getting location for {lat}, {lon}")
+        return 'Unknown'
+    
+    return 'Unknown'
+
+
 def generate_and_visualize_uk_ireland_grid():
     print("Starting grid generation...")
+    
+    # Initialize geolocator
+    geolocator = Nominatim(user_agent="uk_ireland_grid_mapper")
     
     # Define the British National Grid CRS
     bng = CRS('EPSG:27700')
     wgs84 = CRS('EPSG:4326')
     
     # Create transformer objects
-    to_bng = Transformer.from_crs(wgs84, bng, always_xy=True)
     to_wgs84 = Transformer.from_crs(bng, wgs84, always_xy=True)
     
     # Download and load UK and Ireland boundaries
@@ -80,12 +118,15 @@ def generate_and_visualize_uk_ireland_grid():
             point = Point(center_x, center_y)
             
             if uk_ireland.geometry.contains(point).any():
+                
                 # Convert center point back to lat/lon
                 lon, lat = to_wgs84.transform(center_x, center_y)
+                location_name = get_location_name(lat, lon, geolocator)
                 
                 grid_cells.append({
                     'latitude': round(lat, 6),
-                    'longitude': round(lon, 6)
+                    'longitude': round(lon, 6),
+                    "name": location_name
                 })
     
     # Save to JSON
