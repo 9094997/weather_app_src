@@ -13,7 +13,7 @@ geolocator = Nominatim(user_agent="travel_app")
 
 # Sample destination database
 def load_destinations():
-    with open('destinations.json', 'r', encoding='utf-8') as f:
+    with open('script\destinations.json', 'r', encoding='utf-8') as f:
         return json.load(f)
 
 ## load the weather data and the location
@@ -87,7 +87,7 @@ def search():
                 matches.append({
                     'city': city,
                     'distance': round(distance, 1),
-                    'description': info['description'],
+                    'description': info['description'], 
                     'coordinates': {
                         'lat': info['lat'],
                         'lon': info['lon']
