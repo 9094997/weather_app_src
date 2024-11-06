@@ -10,22 +10,91 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let markers = [];
 let radiusCircle = null;
 
+// Location autocomplete functionality
+const fromInput = document.getElementById('from');
+const suggestionsDiv = document.getElementById('locationSuggestions');
+let debounceTimer;
+
+fromInput.addEventListener('input', async (e) => {
+    clearTimeout(debounceTimer);
+    const query = e.target.value;
+    
+    if (query.length < 2) {
+        suggestionsDiv.style.display = 'none';
+        return;
+    }
+
+    // Debounce the API call
+    debounceTimer = setTimeout(async () => {
+        try {
+            const response = await fetch(`/location-suggest?q=${encodeURIComponent(query)}`);
+            const suggestions = await response.json();
+            
+            if (suggestions.length > 0) {
+                suggestionsDiv.innerHTML = suggestions.map(place => `
+                    <div class="suggestion-item" data-lat="${place.lat}" data-lon="${place.lon}">
+                        ${place.display_name}
+                    </div>
+                `).join('');
+                suggestionsDiv.style.display = 'block';
+
+                // Add click handlers to suggestions
+                document.querySelectorAll('.suggestion-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        fromInput.value = item.textContent.trim();
+                        suggestionsDiv.style.display = 'none';
+                        
+                        // Update map with selected location
+                        updateMapLocation({
+                            lat: parseFloat(item.dataset.lat),
+                            lon: parseFloat(item.dataset.lon)
+                        });
+                    });
+                });
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error fetching suggestions:', error);
+        }
+    }, 300); // 300ms delay
+});
+
+// Hide suggestions when clicking outside
+document.addEventListener('click', (e) => {
+    if (!fromInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+        suggestionsDiv.style.display = 'none';
+    }
+});
+
+// Update map with selected location
+function updateMapLocation(coordinates) {
+    if (radiusCircle) {
+        map.removeLayer(radiusCircle);
+    }
+
+    radiusCircle = L.circle([coordinates.lat, coordinates.lon], {
+        radius: distanceSlider.value * 1609.34,
+        color: 'blue',
+        fillColor: '#30c',
+        fillOpacity: 0.1
+    }).addTo(map);
+
+    map.setView([coordinates.lat, coordinates.lon], 8);
+}
+
 // Update distance value display and map radius
 const distanceSlider = document.getElementById('distance');
 const distanceValue = document.getElementById('distanceValue');
 
 function updateDistance(value) {
-    // Update display value
     distanceValue.textContent = value;
     
-    // Update map circle if we have a starting point
-    const fromInput = document.getElementById('from').value;
-    if (fromInput && radiusCircle) {
-        radiusCircle.setRadius(value * 1609.34); // Convert miles to meters
+    if (radiusCircle) {
+        radiusCircle.setRadius(value * 1609.34);
     }
 }
 
-// Listen for slider input
 distanceSlider.addEventListener('input', (e) => {
     updateDistance(e.target.value);
 });
@@ -35,7 +104,7 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const formData = {
-        from: document.getElementById('from').value,
+        from: fromInput.value,
         weather: document.getElementById('weather').value,
         date: document.getElementById('date').value,
         distance: document.getElementById('distance').value
@@ -56,7 +125,7 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
         resultsDiv.innerHTML = '';
 
         // Clear existing markers
-        markers.forEach(marker => map.removeMarker(marker));
+        markers.forEach(marker => map.removeLayer(marker));
         markers = [];
         
         if (data.error) {
@@ -73,7 +142,6 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
             return;
         }
 
-        // Add markers for matching destinations
         data.forEach(destination => {
             resultsDiv.innerHTML += `
                 <div class="p-4 bg-gray-50 rounded-lg shadow">
@@ -83,7 +151,6 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
                 </div>
             `;
 
-            // Add marker to map
             if (destination.coordinates) {
                 const marker = L.marker([destination.coordinates.lat, destination.coordinates.lon])
                     .bindPopup(`<b>${destination.city}</b><br>${destination.description}`)
@@ -92,7 +159,6 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
             }
         });
 
-        // Update map view to include all markers
         if (markers.length > 0) {
             const group = L.featureGroup(markers);
             map.fitBounds(group.getBounds().pad(0.1));
@@ -105,37 +171,5 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
                 An error occurred while searching for destinations.
             </div>
         `;
-    }
-});
-
-// Update map when "From" location changes
-document.getElementById('from').addEventListener('change', async (e) => {
-    const location = e.target.value;
-    if (!location) return;
-
-    try {
-        // Get coordinates for the location (you'll need to implement this endpoint)
-        const response = await fetch(`/geocode?location=${encodeURIComponent(location)}`);
-        const data = await response.json();
-
-        if (data.coordinates) {
-            // Clear existing circle
-            if (radiusCircle) {
-                map.removeLayer(radiusCircle);
-            }
-
-            // Add new circle
-            radiusCircle = L.circle([data.coordinates.lat, data.coordinates.lon], {
-                radius: distanceSlider.value * 1609.34, // Convert miles to meters
-                color: 'blue',
-                fillColor: '#30c',
-                fillOpacity: 0.1
-            }).addTo(map);
-
-            // Center map on location
-            map.setView([data.coordinates.lat, data.coordinates.lon], 8);
-        }
-    } catch (error) {
-        console.error('Error getting coordinates:', error);
     }
 });

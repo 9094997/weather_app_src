@@ -2,8 +2,13 @@ from flask import Flask, render_template, request, jsonify
 from datetime import datetime
 from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut
+import time
 
 app = Flask(__name__)
+
+# Initialize geocoder with a custom user agent
+geolocator = Nominatim(user_agent="travel_app")
 
 # Sample destination database
 DESTINATIONS = {
@@ -22,23 +27,38 @@ DESTINATIONS = {
 def home():
     return render_template('index.html')
 
-@app.route('/geocode')
-def geocode():
-    location = request.args.get('location')
-    if not location:
-        return jsonify({"error": "No location provided"}), 400
+@app.route('/location-suggest')
+def location_suggest():
+    query = request.args.get('q', '')
+    if len(query) < 2:
+        return jsonify([])
     
-    geolocator = Nominatim(user_agent="travel_app")
     try:
-        location_data = geolocator.geocode(location)
-        if location_data:
-            return jsonify({
-                "coordinates": {
-                    "lat": location_data.latitude,
-                    "lon": location_data.longitude
-                }
-            })
-        return jsonify({"error": "Location not found"}), 404
+        # Search for locations using Nominatim
+        locations = geolocator.geocode(
+            query,
+            exactly_one=False,
+            limit=5,
+            addressdetails=True,
+            country_codes=['fr']  # Limit to France
+        )
+        
+        if not locations:
+            return jsonify([])
+        
+        suggestions = []
+        for loc in locations:
+            if loc.address:
+                suggestions.append({
+                    'display_name': loc.address,
+                    'lat': loc.latitude,
+                    'lon': loc.longitude
+                })
+        
+        return jsonify(suggestions)
+    
+    except GeocoderTimedOut:
+        return jsonify({"error": "Service temporarily unavailable"}), 503
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -46,16 +66,13 @@ def geocode():
 def search():
     data = request.json
     
-    # Get user inputs
-    start_location = data['from']
-    desired_weather = data['weather']
-    travel_date = datetime.strptime(data['date'], '%Y-%m-%d')
-    max_distance = float(data['distance'])
-    
-    # Initialize geocoder
-    geolocator = Nominatim(user_agent="travel_app")
-    
     try:
+        # Get user inputs
+        start_location = data['from']
+        desired_weather = data['weather']
+        travel_date = datetime.strptime(data['date'], '%Y-%m-%d')
+        max_distance = float(data['distance'])
+        
         # Get starting location coordinates
         start_location_data = geolocator.geocode(start_location)
         if not start_location_data:
@@ -69,7 +86,6 @@ def search():
             dest_coords = (info['lat'], info['lon'])
             distance = geodesic(start_coords, dest_coords).miles
             
-            # Check if destination matches criteria
             if (distance <= max_distance and
                 desired_weather in info['weather'][travel_date.strftime('%b')]['conditions']):
                 matches.append({

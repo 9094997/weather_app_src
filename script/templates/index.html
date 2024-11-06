@@ -7,6 +7,7 @@
     <title>Travel Destination Finder</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <!-- Add autocomplete styles -->
     <style>
         #map {
             position: fixed;
@@ -14,27 +15,62 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -1;
+            z-index: 0;
         }
         .form-container {
-            background-color: rgba(255, 255, 255, 0.9);
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 400px;
+            background-color: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(5px);
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        .location-wrapper {
+            position: relative;
+        }
+        .location-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-top: none;
+            border-radius: 0 0 0.5rem 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1001;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .suggestion-item {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+        }
+        .suggestion-item:hover {
+            background-color: #f7fafc;
         }
     </style>
 </head>
-<body class="min-h-screen p-8">
+<body class="min-h-screen">
     <!-- Map container -->
     <div id="map"></div>
 
-    <!-- Form overlay -->
-    <div class="max-w-md mx-auto form-container rounded-xl shadow-md overflow-hidden p-6">
+    <!-- Side form -->
+    <div class="form-container p-6">
         <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Find Your Perfect Destination</h1>
         
         <form id="searchForm" class="space-y-6">
-            <div>
+            <div class="location-wrapper">
                 <label class="block text-gray-700 text-sm font-bold mb-2">From:</label>
                 <input type="text" id="from" required
-                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autocomplete="off">
+                <div id="locationSuggestions" class="location-suggestions"></div>
             </div>
             
             <div>
