@@ -880,7 +880,7 @@
     {
       "latitude": 52.922804,
       "longitude": -7.973066,
-      "name": "The Municipal District of Birr"
+      "name": "County Offaly"
     },
     {
       "latitude": 53.037907,
@@ -890,12 +890,12 @@
     {
       "latitude": 53.153004,
       "longitude": -8.005083,
-      "name": "The Municipal District of Birr"
+      "name": "County Offaly"
     },
     {
       "latitude": 53.268095,
       "longitude": -8.021257,
-      "name": "The Municipal District of Birr"
+      "name": "County Offaly"
     },
     {
       "latitude": 53.383181,
@@ -1005,17 +1005,17 @@
     {
       "latitude": 53.047403,
       "longitude": -7.798008,
-      "name": "The Municipal District of Birr"
+      "name": "County Offaly"
     },
     {
       "latitude": 53.16254,
       "longitude": -7.813566,
-      "name": "The Municipal District of Birr"
+      "name": "County Offaly"
     },
     {
       "latitude": 53.277671,
       "longitude": -7.829231,
-      "name": "The Municipal District of Birr"
+      "name": "County Offaly"
     },
     {
       "latitude": 53.392797,
@@ -4070,7 +4070,7 @@
     {
       "latitude": 50.283054,
       "longitude": -3.658165,
-      "name": "Slapton"
+      "name": "Stokenham"
     },
     {
       "latitude": 50.398791,
@@ -4335,7 +4335,7 @@
     {
       "latitude": 57.800642,
       "longitude": -3.987755,
-      "name": "Tain"
+      "name": "Hill of Fearn"
     },
     {
       "latitude": 57.916213,
@@ -4395,7 +4395,7 @@
     {
       "latitude": 50.979935,
       "longitude": -3.499462,
-      "name": "Bampton"
+      "name": "Mid Devon"
     },
     {
       "latitude": 51.095667,
@@ -4440,7 +4440,7 @@
     {
       "latitude": 52.021433,
       "longitude": -3.534049,
-      "name": "Penpont"
+      "name": "Powys"
     },
     {
       "latitude": 52.137143,
@@ -4650,7 +4650,7 @@
     {
       "latitude": 58.266178,
       "longitude": -3.794278,
-      "name": "Highland"
+      "name": "Caithness"
     },
     {
       "latitude": 58.381753,
@@ -4695,7 +4695,7 @@
     {
       "latitude": 51.213625,
       "longitude": -3.322708,
-      "name": "Watchet"
+      "name": "England"
     },
     {
       "latitude": 51.329362,
@@ -5010,7 +5010,7 @@
     {
       "latitude": 51.909992,
       "longitude": -3.155904,
-      "name": "The Vale of Grwyney"
+      "name": "Llanfihangel Cwmdu with Bwlch and Cathedine"
     },
     {
       "latitude": 52.025722,
@@ -5630,7 +5630,7 @@
     {
       "latitude": 53.070393,
       "longitude": -2.802426,
-      "name": "Clutton"
+      "name": "Barton"
     },
     {
       "latitude": 53.186112,
@@ -5645,7 +5645,7 @@
     {
       "latitude": 53.417543,
       "longitude": -2.808949,
-      "name": "Prescot"
+      "name": "Liverpool"
     },
     {
       "latitude": 53.533255,
@@ -5825,7 +5825,7 @@
     {
       "latitude": 50.872341,
       "longitude": -2.581108,
-      "name": "Melbury Osmond"
+      "name": "Dorset"
     },
     {
       "latitude": 50.988109,
@@ -6220,7 +6220,7 @@
     {
       "latitude": 53.41954,
       "longitude": -2.421537,
-      "name": "Partington"
+      "name": "Trafford"
     },
     {
       "latitude": 53.53526,
@@ -6930,7 +6930,7 @@
     {
       "latitude": 51.91557,
       "longitude": -1.845751,
-      "name": "Naunton"
+      "name": "Cotswold District"
     },
     {
       "latitude": 52.031323,
@@ -7145,12 +7145,12 @@
     {
       "latitude": 51.915176,
       "longitude": -1.658571,
-      "name": "Bledington"
+      "name": "Cotswold District"
     },
     {
       "latitude": 52.030928,
       "longitude": -1.657691,
-      "name": "Todenham"
+      "name": "Cotswold District"
     },
     {
       "latitude": 52.146676,
@@ -8205,7 +8205,7 @@
     {
       "latitude": 52.022281,
       "longitude": -0.531953,
-      "name": "Central Bedfordshire"
+      "name": "Lidlington"
     },
     {
       "latitude": 52.137994,
@@ -8260,7 +8260,7 @@
     {
       "latitude": 53.294987,
       "longitude": -0.488685,
-      "name": "Dunholme CP"
+      "name": "West Lindsey"
     },
     {
       "latitude": 53.410673,
@@ -8290,7 +8290,7 @@
     {
       "latitude": 53.989064,
       "longitude": -0.463666,
-      "name": "Driffield"
+      "name": "East Riding of Yorkshire"
     },
     {
       "latitude": 54.104735,
@@ -8760,7 +8760,7 @@
     {
       "latitude": 52.12621,
       "longitude": 0.223812,
-      "name": "Cambridge"
+      "name": "South Cambridgeshire"
     },
     {
       "latitude": 52.241871,

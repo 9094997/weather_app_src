@@ -7,7 +7,7 @@
     <title>Travel Destination Finder</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <!-- Add autocomplete styles -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         #map {
             position: fixed;
@@ -19,15 +19,16 @@
         }
         .form-container {
             position: fixed;
-            top: 0;
-            left: 0;
-            height: 100vh;
-            width: 400px;
+            top: 20px;
+            left: 20px;
+            width: 380px;
             background-color: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(5px);
-            overflow-y: auto;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
             z-index: 1000;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
         }
         .location-wrapper {
             position: relative;
@@ -40,12 +41,12 @@
             background: white;
             border: 1px solid #e2e8f0;
             border-top: none;
-            border-radius: 0 0 0.5rem 0.5rem;
+            border-radius: 0 0 1rem 1rem;
             max-height: 200px;
             overflow-y: auto;
             z-index: 1001;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             display: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         .suggestion-item {
             padding: 0.5rem 1rem;
@@ -54,44 +55,106 @@
         .suggestion-item:hover {
             background-color: #f7fafc;
         }
+        .weather-icon {
+            width: 60px;
+            height: 60px;
+            border: 2px solid transparent;
+            border-radius: 16px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            gap: 5px;
+        }
+        .weather-icon:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .weather-icon.selected {
+            border-color: #3B82F6;
+            background-color: #EFF6FF;
+        }
+        .weather-icon i {
+            font-size: 24px;
+        }
+        .weather-icon span {
+            font-size: 12px;
+            text-align: center;
+        }
+        /* Hide Leaflet zoom control */
+        .leaflet-control-zoom {
+            display: none !important;
+        }
+        /* Custom scrollbar */
+        .form-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .form-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .form-container::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body class="min-h-screen">
     <!-- Map container -->
     <div id="map"></div>
 
-    <!-- Side form -->
+    <!-- Floating form -->
     <div class="form-container p-6">
-        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Find Your Perfect Destination</h1>
+        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Find Your Destination</h1>
         
         <form id="searchForm" class="space-y-6">
             <div class="location-wrapper">
-                <label class="block text-gray-700 text-sm font-bold mb-2">From:</label>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Starting Point:</label>
                 <input type="text" id="from" required
                     class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter city or location"
                     autocomplete="off">
                 <div id="locationSuggestions" class="location-suggestions"></div>
             </div>
             
             <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">Desired Weather:</label>
-                <select id="weather" required
-                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="Sunny">Sunny</option>
-                    <option value="Rainy">Rainy</option>
-                    <option value="Cloudy">Cloudy</option>
-                </select>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Weather:</label>
+                <input type="hidden" id="weather" value="Sunny">
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="weather-icon selected" data-weather="Sunny">
+                        <i class="fas fa-sun text-yellow-400"></i>
+                        <span>Sunny</span>
+                    </div>
+                    <div class="weather-icon" data-weather="Cloudy">
+                        <i class="fas fa-cloud text-gray-400"></i>
+                        <span>Cloudy</span>
+                    </div>
+                    <div class="weather-icon" data-weather="Rainy">
+                        <i class="fas fa-cloud-rain text-blue-400"></i>
+                        <span>Rainy</span>
+                    </div>
+                    <div class="weather-icon" data-weather="Windy">
+                        <i class="fas fa-wind text-gray-500"></i>
+                        <span>Windy</span>
+                    </div>
+                    <div class="weather-icon" data-weather="Snowy">
+                        <i class="fas fa-snowflake text-blue-300"></i>
+                        <span>Snowy</span>
+                    </div>
+                </div>
             </div>
             
             <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">Date:</label>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Travel Date:</label>
                 <input type="date" id="date" required
                     class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
             
             <div>
                 <label class="block text-gray-700 text-sm font-bold mb-2">
-                    Maximum Travel Distance (miles): <span id="distanceValue">500</span>
+                    Maximum Distance: <span id="distanceValue">500</span> miles
                 </label>
                 <input type="range" id="distance" min="1" max="1000" value="500" step="1"
                     class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
@@ -99,7 +162,7 @@
             
             <button type="submit"
                 class="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">
-                Search
+                Search Destinations
             </button>
         </form>
         

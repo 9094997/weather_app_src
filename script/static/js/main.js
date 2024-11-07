@@ -1,6 +1,9 @@
 // static/js/main.js
-// Initialize the map
-const map = L.map('map').setView([46.2276, 2.2137], 6); // Center on France
+
+// Initialize the map with zoom control disabled
+const map = L.map('map', {
+    zoomControl: false  // Disable zoom control
+}).setView([46.2276, 2.2137], 6);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
@@ -9,6 +12,59 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // Store markers and circle
 let markers = [];
 let radiusCircle = null;
+
+// Set up date restrictions
+function setupDateRestrictions() {
+    const dateInput = document.getElementById('date');
+    const today = new Date();
+    const maxDate = new Date();
+    maxDate.setDate(today.getDate() + 7);
+    
+    // Format dates as YYYY-MM-DD
+    const formatDate = (date) => {
+        const d = new Date(date);
+        const month = (d.getMonth() + 1).toString().padStart(2, '0');
+        const day = d.getDate().toString().padStart(2, '0');
+        return `${d.getFullYear()}-${month}-${day}`;
+    };
+    
+    // Set min and max dates
+    dateInput.min = formatDate(today);
+    dateInput.max = formatDate(maxDate);
+    
+    // Set default value to today
+    dateInput.value = formatDate(today);
+}
+
+// Call setup function when page loads
+setupDateRestrictions();
+
+// Weather icon selection
+const weatherIcons = document.querySelectorAll('.weather-icon');
+const weatherInput = document.getElementById('weather');
+
+weatherIcons.forEach(icon => {
+    icon.addEventListener('click', (e) => {
+        weatherIcons.forEach(i => i.classList.remove('selected'));
+        icon.classList.add('selected');
+        weatherInput.value = icon.dataset.weather;
+    });
+});
+// Update distance value display and map radius
+const distanceSlider = document.getElementById('distance');
+const distanceValue = document.getElementById('distanceValue');
+
+function updateDistance(value) {
+    distanceValue.textContent = value;
+    
+    if (radiusCircle) {
+        radiusCircle.setRadius(value * 1609.34);
+    }
+}
+
+distanceSlider.addEventListener('input', (e) => {
+    updateDistance(e.target.value);
+});
 
 // Location autocomplete functionality
 const fromInput = document.getElementById('from');
@@ -24,7 +80,6 @@ fromInput.addEventListener('input', async (e) => {
         return;
     }
 
-    // Debounce the API call
     debounceTimer = setTimeout(async () => {
         try {
             const response = await fetch(`/location-suggest?q=${encodeURIComponent(query)}`);
@@ -38,13 +93,11 @@ fromInput.addEventListener('input', async (e) => {
                 `).join('');
                 suggestionsDiv.style.display = 'block';
 
-                // Add click handlers to suggestions
                 document.querySelectorAll('.suggestion-item').forEach(item => {
                     item.addEventListener('click', () => {
                         fromInput.value = item.textContent.trim();
                         suggestionsDiv.style.display = 'none';
                         
-                        // Update map with selected location
                         updateMapLocation({
                             lat: parseFloat(item.dataset.lat),
                             lon: parseFloat(item.dataset.lon)
@@ -57,7 +110,7 @@ fromInput.addEventListener('input', async (e) => {
         } catch (error) {
             console.error('Error fetching suggestions:', error);
         }
-    }, 300); // 300ms delay
+    }, 300);
 });
 
 // Hide suggestions when clicking outside
@@ -75,29 +128,13 @@ function updateMapLocation(coordinates) {
 
     radiusCircle = L.circle([coordinates.lat, coordinates.lon], {
         radius: distanceSlider.value * 1609.34,
-        color: 'blue',
-        fillColor: '#30c',
-        fillOpacity: 0.1
+        color: '#3B82F6',
+        fillColor: '#93C5FD',
+        fillOpacity: 0.2
     }).addTo(map);
 
     map.setView([coordinates.lat, coordinates.lon], 8);
 }
-
-// Update distance value display and map radius
-const distanceSlider = document.getElementById('distance');
-const distanceValue = document.getElementById('distanceValue');
-
-function updateDistance(value) {
-    distanceValue.textContent = value;
-    
-    if (radiusCircle) {
-        radiusCircle.setRadius(value * 1609.34);
-    }
-}
-
-distanceSlider.addEventListener('input', (e) => {
-    updateDistance(e.target.value);
-});
 
 // Handle form submission
 document.getElementById('searchForm').addEventListener('submit', async (e) => {
@@ -105,7 +142,7 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
     
     const formData = {
         from: fromInput.value,
-        weather: document.getElementById('weather').value,
+        weather: weatherInput.value,
         date: document.getElementById('date').value,
         distance: document.getElementById('distance').value
     };
@@ -144,7 +181,7 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
 
         data.forEach(destination => {
             resultsDiv.innerHTML += `
-                <div class="p-4 bg-gray-50 rounded-lg shadow">
+                <div class="p-4 bg-gray-50 rounded-lg shadow hover:shadow-md transition-shadow">
                     <h3 class="font-bold text-lg text-gray-800">${destination.city}</h3>
                     <p class="text-gray-600">${destination.description}</p>
                     <p class="text-sm text-gray-500 mt-2">Distance: ${destination.distance} miles</p>
