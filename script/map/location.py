@@ -121,12 +121,13 @@ def generate_and_visualize_uk_ireland_grid():
                 
                 # Convert center point back to lat/lon
                 lon, lat = to_wgs84.transform(center_x, center_y)
-                location_name = get_location_name(lat, lon, geolocator)
+                ## IMPORTANT!!! we descide to not get the location name from geolocator as it can be time consuming, we will send the lat and lon to weather api and get the location name from the reposne.
+                ##location_name = get_location_name(lat, lon, geolocator)
                 
+                ## if we want to add the location name to the json in the future then just add it below. 
                 grid_cells.append({
                     'latitude': round(lat, 6),
-                    'longitude': round(lon, 6),
-                    "name": location_name
+                    'longitude': round(lon, 6)
                 })
     
     # Save to JSON
