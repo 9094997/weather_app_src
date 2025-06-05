@@ -12,6 +12,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // Store markers and circle
 let markers = [];
 let radiusCircle = null;
+let startPointMarker = null;
 
 // Set up date restrictions
 function setupDateRestrictions() {
@@ -103,6 +104,11 @@ fromInput.addEventListener('input', function() {
                         div.addEventListener('click', () => {
                             fromInput.value = suggestion.display_name;
                             suggestionsDiv.style.display = 'none';
+                            // Update map with selected location
+                            updateMapLocation({
+                                lat: parseFloat(suggestion.lat),
+                                lon: parseFloat(suggestion.lon)
+                            });
                         });
                         suggestionsDiv.appendChild(div);
                     });
@@ -123,15 +129,33 @@ document.addEventListener('click', (e) => {
 
 // Update map with selected location
 function updateMapLocation(coordinates) {
+    // Remove existing radius circle and start point marker
     if (radiusCircle) {
         map.removeLayer(radiusCircle);
     }
+    if (startPointMarker) {
+        map.removeLayer(startPointMarker);
+    }
 
+    // Create start point marker
+    const startIcon = L.divIcon({
+        className: 'start-point-marker',
+        html: '<div style="background-color: #3B82F6; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+    });
+
+    startPointMarker = L.marker([coordinates.lat, coordinates.lon], {
+        icon: startIcon
+    }).addTo(map);
+
+    // Create radius circle
     radiusCircle = L.circle([coordinates.lat, coordinates.lon], {
         radius: distanceSlider.value * 1609.34,
         color: '#3B82F6',
         fillColor: '#93C5FD',
-        fillOpacity: 0.2
+        fillOpacity: 0.2,
+        weight: 2
     }).addTo(map);
 
     map.setView([coordinates.lat, coordinates.lon], 8);

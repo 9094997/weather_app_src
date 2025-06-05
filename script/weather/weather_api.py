@@ -20,7 +20,7 @@ class WeatherDataProcessor:
         params = {
             'key': self.api_key,
             'q': f"{lat}, {lon}",
-            'days': 4,
+            'days': 7,
             'aqi': 'no',
             'alerts': 'no'
         }
@@ -147,7 +147,7 @@ def main():
     
     # Randomly select 20 locations from the total cells
     total_cells = locations_data['cells']
-    selected_cells = random.sample(total_cells, min(35, len(total_cells)))
+    selected_cells = random.sample(total_cells, min(100, len(total_cells)))
     
     print(f"Processing weather data for {len(selected_cells)} randomly selected locations...")
     
