@@ -1,29 +1,40 @@
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime
 import json
+import os
 from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut
-import time
 
 app = Flask(__name__)
 
 # Initialize geocoder with a custom user agent
 geolocator = Nominatim(user_agent="travel_app")
 
-# Sample destination database
-def load_destinations():
-    with open('script\destinations.json', 'r', encoding='utf-8') as f:
-        return json.load(f)
+def load_weather_data():
+    """Load weather data from weather_data.json"""
+    try:
+        # Get the absolute path to the script directory
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        weather_file = os.path.join(script_dir, 'weather', 'weather_data.json')
+        with open(weather_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"Error: weather_data.json not found at {weather_file}")
+        return {"weather_data": []}
+    except json.JSONDecodeError:
+        print("Error: Invalid JSON in weather_data.json")
+        return {"weather_data": []}
 
-## load the weather data and the location
-DESTINATIONS = load_destinations()
+# Load the weather data
+WEATHER_DATA = load_weather_data()
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
 @app.route('/location-suggest')
+#this function take user's location input and convert it to coordinates
 def location_suggest():
     query = request.args.get('q', '')
     if len(query) < 2:
@@ -36,7 +47,7 @@ def location_suggest():
             exactly_one=False,
             limit=5,
             addressdetails=True,
-            country_codes=['fr']  # Limit to France
+            country_codes=['gb']  # Limit to UK
         )
         
         if not locations:
@@ -76,28 +87,45 @@ def search():
         
         start_coords = (start_location_data.latitude, start_location_data.longitude)
         
-        # Find matching destinations
+        # Find matching destinations from weather data
         matches = []
-        for city, info in DESTINATIONS.items():
-            dest_coords = (info['lat'], info['lon'])
+        for location_data in WEATHER_DATA.get('weather_data', []):
+            location = location_data['location']
+            dest_coords = (location['latitude'], location['longitude'])
             distance = geodesic(start_coords, dest_coords).miles
             
-            if (distance <= max_distance and
-                desired_weather in info['weather'][travel_date.strftime('%b')]['conditions']):
-                matches.append({
-                    'city': city,
-                    'distance': round(distance, 1),
-                    'description': info['description'], 
-                    'coordinates': {
-                        'lat': info['lat'],
-                        'lon': info['lon']
-                    }
-                })
+            # Check if any forecast day matches the travel date
+            for forecast in location_data['forecast']:
+                forecast_date = datetime.strptime(forecast['date'], '%Y-%m-%d')
+                if forecast_date.date() == travel_date.date():
+                    # Check if the weather condition matches
+                    condition_text = forecast['condition']['text'].lower()
+                    if desired_weather.lower() in condition_text and distance <= max_distance:
+                        matches.append({
+                            'city': location['name'],
+                            'region': location['region'],
+                            'country': location['country'],
+                            'distance': round(distance, 1),
+                            'coordinates': {
+                                'lat': location['latitude'],
+                                'lon': location['longitude']
+                            },
+                            'weather': {
+                                'condition': forecast['condition']['text'],
+                                'temperature': forecast['temperature']
+                            }
+                        })
+                    break
         
         return jsonify(matches)
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/weather-data')
+def get_weather_data():
+    """Return the current weather data"""
+    return jsonify(WEATHER_DATA)
 
 if __name__ == '__main__':
     app.run(debug=True)

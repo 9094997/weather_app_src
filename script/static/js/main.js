@@ -3,7 +3,7 @@
 // Initialize the map with zoom control disabled
 const map = L.map('map', {
     zoomControl: false  // Disable zoom control
-}).setView([46.2276, 2.2137], 6);
+}).setView([54.5, -2], 6); // Center on UK
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
@@ -18,7 +18,7 @@ function setupDateRestrictions() {
     const dateInput = document.getElementById('date');
     const today = new Date();
     const maxDate = new Date();
-    maxDate.setDate(today.getDate() + 7);
+    maxDate.setDate(today.getDate() + 4); // Limit to 4 days as per weather API
     
     // Format dates as YYYY-MM-DD
     const formatDate = (date) => {
@@ -50,6 +50,7 @@ weatherIcons.forEach(icon => {
         weatherInput.value = icon.dataset.weather;
     });
 });
+
 // Update distance value display and map radius
 const distanceSlider = document.getElementById('distance');
 const distanceValue = document.getElementById('distanceValue');
@@ -180,17 +181,33 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
         }
 
         data.forEach(destination => {
+            const weatherInfo = destination.weather;
+            const temp = weatherInfo.temperature;
+            
             resultsDiv.innerHTML += `
                 <div class="p-4 bg-gray-50 rounded-lg shadow hover:shadow-md transition-shadow">
-                    <h3 class="font-bold text-lg text-gray-800">${destination.city}</h3>
-                    <p class="text-gray-600">${destination.description}</p>
+                    <h3 class="font-bold text-lg text-gray-800">${destination.city}, ${destination.region}</h3>
+                    <div class="mt-2">
+                        <p class="text-gray-600">
+                            <i class="fas fa-temperature-high mr-2"></i>
+                            Temperature: ${temp.average}°C (Max: ${temp.max}°C, Min: ${temp.min}°C)
+                        </p>
+                        <p class="text-gray-600">
+                            <i class="fas fa-cloud mr-2"></i>
+                            Condition: ${weatherInfo.condition}
+                        </p>
+                    </div>
                     <p class="text-sm text-gray-500 mt-2">Distance: ${destination.distance} miles</p>
                 </div>
             `;
 
             if (destination.coordinates) {
                 const marker = L.marker([destination.coordinates.lat, destination.coordinates.lon])
-                    .bindPopup(`<b>${destination.city}</b><br>${destination.description}`)
+                    .bindPopup(`
+                        <b>${destination.city}</b><br>
+                        Temperature: ${temp.average}°C<br>
+                        Condition: ${weatherInfo.condition}
+                    `)
                     .addTo(map);
                 markers.push(marker);
             }
@@ -200,13 +217,10 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
             const group = L.featureGroup(markers);
             map.fitBounds(group.getBounds().pad(0.1));
         }
-
     } catch (error) {
         console.error('Error:', error);
-        document.getElementById('results').innerHTML = `
-            <div class="p-4 bg-red-100 text-red-700 rounded-lg">
-                An error occurred while searching for destinations.
-            </div>
-        `;
+        resultsDiv.innerHTML = `<div class="p-4 bg-red-100 text-red-700 rounded-lg">
+            An error occurred while searching for destinations.
+        </div>`;
     }
 });

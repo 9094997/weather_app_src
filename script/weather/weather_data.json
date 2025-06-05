@@ -1,0 +1,947 @@
+{
+  "grid_size_miles": 8,
+  "total_cells": 20,
+  "weather_data": [
+    {
+      "location": {
+        "name": "Holbeach",
+        "region": "Lincolnshire",
+        "country": "United Kingdom",
+        "latitude": 52.81,
+        "longitude": 0.024
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 16.2,
+            "min": 10.0,
+            "average": 12.3
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 16.5,
+            "min": 7.5,
+            "average": 12.2
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 16.6,
+            "min": 8.9,
+            "average": 12.4
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Glenluce",
+        "region": "Dumfries and Galloway",
+        "country": "United Kingdom",
+        "latitude": 54.88,
+        "longitude": -4.815
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 11.5,
+            "min": 9.5,
+            "average": 10.5
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 12.4,
+            "min": 9.0,
+            "average": 10.8
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 12.0,
+            "min": 9.9,
+            "average": 10.9
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Tipperary",
+        "region": "Tipperary",
+        "country": "Ireland",
+        "latitude": 52.473,
+        "longitude": -8.156
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 14.6,
+            "min": 7.6,
+            "average": 11.1
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 13.3,
+            "min": 3.5,
+            "average": 9.4
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 13.3,
+            "min": 6.8,
+            "average": 10.8
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Llanelli",
+        "region": "Carmarthenshire",
+        "country": "United Kingdom",
+        "latitude": 51.683,
+        "longitude": -4.164
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 14.5,
+            "min": 10.7,
+            "average": 12.7
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 13.1,
+            "min": 10.1,
+            "average": 11.8
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 13.9,
+            "min": 10.5,
+            "average": 12.6
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Harpenden",
+        "region": "Hertfordshire",
+        "country": "United Kingdom",
+        "latitude": 51.818,
+        "longitude": -0.355
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 16.2,
+            "min": 9.5,
+            "average": 12.1
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 17.9,
+            "min": 8.1,
+            "average": 12.5
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 17.3,
+            "min": 8.7,
+            "average": 12.6
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Colchester",
+        "region": "Essex",
+        "country": "United Kingdom",
+        "latitude": 51.892,
+        "longitude": 0.898
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 15.5,
+            "min": 10.5,
+            "average": 12.7
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 18.2,
+            "min": 9.3,
+            "average": 13.4
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 16.3,
+            "min": 9.9,
+            "average": 13.3
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Sligo",
+        "region": "Sligo",
+        "country": "Ireland",
+        "latitude": 54.267,
+        "longitude": -8.483
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 12.6,
+            "min": 7.5,
+            "average": 10.1
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 12.9,
+            "min": 6.6,
+            "average": 9.9
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 11.7,
+            "min": 8.3,
+            "average": 10.3
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Moate",
+        "region": "Longford",
+        "country": "Ireland",
+        "latitude": 53.55,
+        "longitude": -7.717
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 14.3,
+            "min": 5.1,
+            "average": 10.1
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 14.1,
+            "min": 4.2,
+            "average": 9.3
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 13.2,
+            "min": 7.0,
+            "average": 10.6
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Buncrana",
+        "region": "Donegal",
+        "country": "Ireland",
+        "latitude": 55.133,
+        "longitude": -7.45
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 14.0,
+            "min": 4.1,
+            "average": 9.0
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 14.8,
+            "min": 3.3,
+            "average": 9.2
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 11.8,
+            "min": 6.7,
+            "average": 9.1
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Letterkenny",
+        "region": "Donegal",
+        "country": "Ireland",
+        "latitude": 54.95,
+        "longitude": -7.733
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 13.1,
+            "min": 6.5,
+            "average": 9.7
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 13.8,
+            "min": 5.7,
+            "average": 9.8
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 11.2,
+            "min": 7.8,
+            "average": 9.5
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Penzance",
+        "region": "Cornwall",
+        "country": "United Kingdom",
+        "latitude": 50.12,
+        "longitude": -5.548
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 14.8,
+            "min": 11.4,
+            "average": 13.5
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 14.4,
+            "min": 11.5,
+            "average": 13.0
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 14.9,
+            "min": 12.4,
+            "average": 13.7
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Moate",
+        "region": "Longford",
+        "country": "Ireland",
+        "latitude": 53.55,
+        "longitude": -7.717
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 14.3,
+            "min": 5.1,
+            "average": 10.1
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 14.1,
+            "min": 4.2,
+            "average": 9.3
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 13.2,
+            "min": 7.0,
+            "average": 10.6
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Newtonmore",
+        "region": "Highland",
+        "country": "United Kingdom",
+        "latitude": 57.069,
+        "longitude": -4.121
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 10.5,
+            "min": 0.3,
+            "average": 6.3
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 13.2,
+            "min": -1.4,
+            "average": 7.6
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 11.7,
+            "min": 5.9,
+            "average": 8.0
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Gruids",
+        "region": "Highland",
+        "country": "United Kingdom",
+        "latitude": 58.0065,
+        "longitude": -4.4301
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 11.6,
+            "min": 4.9,
+            "average": 8.1
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 14.1,
+            "min": 3.7,
+            "average": 9.4
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 12.5,
+            "min": 5.7,
+            "average": 9.0
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Glenancross",
+        "region": "Highland",
+        "country": "United Kingdom",
+        "latitude": 56.9556,
+        "longitude": -5.8419
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 10.3,
+            "min": 7.3,
+            "average": 9.0
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 11.5,
+            "min": 6.5,
+            "average": 9.5
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 12.2,
+            "min": 7.9,
+            "average": 9.9
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Hebden",
+        "region": "North Yorkshire",
+        "country": "United Kingdom",
+        "latitude": 54.067,
+        "longitude": -1.963
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 12.9,
+            "min": 7.8,
+            "average": 9.9
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 11.6,
+            "min": 6.1,
+            "average": 9.0
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 11.5,
+            "min": 6.0,
+            "average": 8.6
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Dartmoor",
+        "region": "Devon",
+        "country": "United Kingdom",
+        "latitude": 50.554,
+        "longitude": -3.999
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 13.2,
+            "min": 9.3,
+            "average": 11.1
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 13.6,
+            "min": 8.1,
+            "average": 10.8
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 13.8,
+            "min": 8.3,
+            "average": 11.2
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Coedpoeth",
+        "region": "Wrexham",
+        "country": "United Kingdom",
+        "latitude": 53.056,
+        "longitude": -3.068
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 16.1,
+            "min": 7.9,
+            "average": 11.5
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 15.9,
+            "min": 6.3,
+            "average": 11.3
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 14.9,
+            "min": 7.7,
+            "average": 11.2
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Plymouth",
+        "region": "Devon",
+        "country": "United Kingdom",
+        "latitude": 50.389,
+        "longitude": -4.147
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 14.7,
+            "min": 10.2,
+            "average": 12.9
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 14.7,
+            "min": 10.1,
+            "average": 12.5
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 15.0,
+            "min": 11.2,
+            "average": 13.3
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        }
+      ]
+    },
+    {
+      "location": {
+        "name": "Hebden",
+        "region": "North Yorkshire",
+        "country": "United Kingdom",
+        "latitude": 54.067,
+        "longitude": -1.963
+      },
+      "forecast": [
+        {
+          "date": "2025-06-05",
+          "temperature": {
+            "max": 12.9,
+            "min": 7.8,
+            "average": 9.9
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-06",
+          "temperature": {
+            "max": 11.6,
+            "min": 6.1,
+            "average": 9.0
+          },
+          "condition": {
+            "text": "rainy",
+            "code": 1063
+          }
+        },
+        {
+          "date": "2025-06-07",
+          "temperature": {
+            "max": 11.5,
+            "min": 6.0,
+            "average": 8.6
+          },
+          "condition": {
+            "text": "Moderate rain",
+            "code": 1189
+          }
+        }
+      ]
+    }
+  ],
+  "generated_at": "2025-06-05T07:49:56.327708"
+}

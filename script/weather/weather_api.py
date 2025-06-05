@@ -3,26 +3,30 @@ import requests
 from datetime import datetime
 import os
 from typing import Dict, List, Any
+import random
+import sys
+
+# Add the parent directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from weather.config import OPENWEATHER_API_KEY, REQUEST_TIMEOUT, OUTPUT_FILE
 
 class WeatherDataProcessor:
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.base_url = "https://api.openweathermap.org/data/2.5/weather"
-    
-    def kelvin_to_celsius(self, kelvin: float) -> float:
-        """Convert Kelvin to Celsius."""
-        return round(kelvin - 273.15, 2)
+        self.base_url = "http://api.weatherapi.com/v1/forecast.json"
     
     def get_weather_data(self, lat: float, lon: float) -> Dict[str, Any]:
-        """Fetch weather data from OpenWeather API."""
+        """Fetch weather data from WeatherAPI.com."""
         params = {
-            'lat': lat,
-            'lon': lon,
-            'appid': self.api_key
+            'key': self.api_key,
+            'q': f"{lat}, {lon}",
+            'days': 4,
+            'aqi': 'no',
+            'alerts': 'no'
         }
         
         try:
-            response = requests.get(self.base_url, params=params)
+            response = requests.get(self.base_url, params=params, timeout=REQUEST_TIMEOUT)
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:
@@ -30,67 +34,107 @@ class WeatherDataProcessor:
             return None
 
     def process_weather_data(self, raw_data: Dict[str, Any], location_info: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract and process relevant weather parameters."""
+        """Extract and process relevant weather parameters from WeatherAPI.com response."""
         if not raw_data:
             return None
             
+        # Get location data
+        location = raw_data['location']
+            
         processed_data = {
-            'latitude': location_info['latitude'],
-            'longitude': location_info['longitude'],
-            'name': location_info['name'],
-            'weather': {
-                'temperature': {
-                    'average': self.kelvin_to_celsius(raw_data['main']['temp']),
-                    'min': self.kelvin_to_celsius(raw_data['main']['temp_min']),
-                    'max': self.kelvin_to_celsius(raw_data['main']['temp_max'])
-                },
-                'wind_speed': raw_data['wind']['speed'],
-                'uv_level': self.get_uv_index(location_info['latitude'], location_info['longitude']),
-                'condition': raw_data['weather'][0]['main'],
-                'condition_description': raw_data['weather'][0]['description']
+            'location': {
+                'name': location['name'],
+                'region': location['region'],
+                'country': location['country'],
+                'latitude': location['lat'],
+                'longitude': location['lon']
             },
-            'timestamp': datetime.utcnow().isoformat()
+            'forecast': []
         }
+        
+        # Add forecast data for next days
+        for day in raw_data['forecast']['forecastday']:
+            forecast_data = {
+                'date': day['date'],
+                'temperature': {
+                    'max': day['day']['maxtemp_c'],
+                    'min': day['day']['mintemp_c'],
+                    'average': day['day']['avgtemp_c']
+                },
+                'condition': {
+                    'text': day['day']['condition']['text'],
+                    'code': day['day']['condition']['code']
+                }
+            }
+            processed_data['forecast'].append(forecast_data)
         
         return processed_data
-    
-    def get_uv_index(self, lat: float, lon: float) -> float:
-        """Fetch UV index data from OpenWeather API."""
-        uv_url = f"https://api.openweathermap.org/data/2.5/uvi"
-        params = {
-            'lat': lat,
-            'lon': lon,
-            'appid': self.api_key
-        }
-        
+
+def cleanup_weather_data():
+    """Clean up the weather data file before starting new data collection."""
+    output_path = os.path.join(os.path.dirname(__file__), OUTPUT_FILE)
+    if os.path.exists(output_path):
         try:
-            response = requests.get(uv_url, params=params)
-            response.raise_for_status()
-            return response.json()['value']
-        except requests.RequestException:
-            return None
+            os.remove(output_path)
+            print(f"Cleaned up existing {OUTPUT_FILE}")
+        except Exception as e:
+            print(f"Error cleaning up {OUTPUT_FILE}: {str(e)}")
 
 def main():
-    # Load API key from environment variable
-    api_key = os.getenv('OPENWEATHER_API_KEY')
+    # Clean up existing weather data
+    cleanup_weather_data()
+    
+    # Use API key from config
+    api_key = OPENWEATHER_API_KEY
     if not api_key:
-        raise ValueError("OpenWeather API key not found in environment variables")
+        raise ValueError("WeatherAPI.com API key not found in config")
     
     # Initialize weather processor
     processor = WeatherDataProcessor(api_key)
     
     # Load locations from JSON file
     try:
-        with open('locations.json', 'r') as file:
-            locations_data = json.load(file)
+        # Update path to point to the map folder
+        locations_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'map', 'locations.json')
+        print(f"Attempting to read locations file from: {locations_file}")
+        
+        if not os.path.exists(locations_file):
+            print(f"Error: File does not exist at {locations_file}")
+            return
+            
+        with open(locations_file, 'r', encoding='utf-8') as file:
+            try:
+                locations_data = json.load(file)
+                print("Successfully loaded JSON data")
+            except json.JSONDecodeError as e:
+                print(f"JSON decode error: {str(e)}")
+                print(f"Error occurred at line {e.lineno}, column {e.colno}")
+                return
+                
+        if not isinstance(locations_data, dict) or 'cells' not in locations_data:
+            print("Error: Invalid JSON structure. Expected a dictionary with 'cells' key")
+            return
+            
+        print(f"Found {len(locations_data['cells'])} locations in the file")
+        
     except FileNotFoundError:
-        print("Error: locations.json file not found")
+        print(f"Error: locations.json file not found at {locations_file}")
+        return
+    except Exception as e:
+        print(f"Error loading locations file: {str(e)}")
         return
     
-    # Process weather data for each location
+    # Randomly select 20 locations from the total cells
+    total_cells = locations_data['cells']
+    selected_cells = random.sample(total_cells, min(20, len(total_cells)))
+    
+    print(f"Processing weather data for {len(selected_cells)} randomly selected locations...")
+    
+    # Process weather data for selected locations
     processed_weather_data = []
     
-    for cell in locations_data['cells']:
+    for index, cell in enumerate(selected_cells, 1):
+        print(f"{index:3d} Fetching weather data for coordinates: {cell['latitude']}, {cell['longitude']}")
         raw_weather = processor.get_weather_data(cell['latitude'], cell['longitude'])
         if raw_weather:
             processed_data = processor.process_weather_data(raw_weather, cell)
@@ -100,15 +144,18 @@ def main():
     # Save processed data to new JSON file
     output_data = {
         'grid_size_miles': locations_data['grid_size_miles'],
-        'total_cells': locations_data['total_cells'],
+        'total_cells': len(selected_cells),
         'weather_data': processed_weather_data,
         'generated_at': datetime.utcnow().isoformat()
     }
     
-    with open('weather_forecast.json', 'w') as file:
+    # Use the output file path from config
+    output_path = os.path.join(os.path.dirname(__file__), OUTPUT_FILE)
+    with open(output_path, 'w') as file:
         json.dump(output_data, file, indent=2)
     
-    print(f"Weather data has been processed and saved to weather_forecast.json")
+    print(f"Weather data has been processed and saved to {OUTPUT_FILE}")
+    print(f"Successfully processed {len(processed_weather_data)} locations")
 
 if __name__ == "__main__":
     main()
