@@ -39,15 +39,24 @@ function setupDateRestrictions() {
 // Call setup function when page loads
 setupDateRestrictions();
 
+// Create custom icon class
+const WeatherIcon = L.Icon.extend({
+    options: {
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+        popupAnchor: [0, -20]
+    }
+});
+
 // Weather icon selection
 const weatherIcons = document.querySelectorAll('.weather-icon');
 const weatherInput = document.getElementById('weather');
 
 weatherIcons.forEach(icon => {
-    icon.addEventListener('click', (e) => {
+    icon.addEventListener('click', function() {
         weatherIcons.forEach(i => i.classList.remove('selected'));
-        icon.classList.add('selected');
-        weatherInput.value = icon.dataset.weather;
+        this.classList.add('selected');
+        weatherInput.value = this.dataset.weather;
     });
 });
 
@@ -70,47 +79,38 @@ distanceSlider.addEventListener('input', (e) => {
 // Location autocomplete functionality
 const fromInput = document.getElementById('from');
 const suggestionsDiv = document.getElementById('locationSuggestions');
-let debounceTimer;
+let timeoutId;
 
-fromInput.addEventListener('input', async (e) => {
-    clearTimeout(debounceTimer);
-    const query = e.target.value;
+fromInput.addEventListener('input', function() {
+    clearTimeout(timeoutId);
+    const query = this.value.trim();
     
     if (query.length < 2) {
         suggestionsDiv.style.display = 'none';
         return;
     }
 
-    debounceTimer = setTimeout(async () => {
-        try {
-            const response = await fetch(`/location-suggest?q=${encodeURIComponent(query)}`);
-            const suggestions = await response.json();
-            
-            if (suggestions.length > 0) {
-                suggestionsDiv.innerHTML = suggestions.map(place => `
-                    <div class="suggestion-item" data-lat="${place.lat}" data-lon="${place.lon}">
-                        ${place.display_name}
-                    </div>
-                `).join('');
-                suggestionsDiv.style.display = 'block';
-
-                document.querySelectorAll('.suggestion-item').forEach(item => {
-                    item.addEventListener('click', () => {
-                        fromInput.value = item.textContent.trim();
-                        suggestionsDiv.style.display = 'none';
-                        
-                        updateMapLocation({
-                            lat: parseFloat(item.dataset.lat),
-                            lon: parseFloat(item.dataset.lon)
+    timeoutId = setTimeout(() => {
+        fetch(`/location-suggest?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(suggestions => {
+                suggestionsDiv.innerHTML = '';
+                if (suggestions.length > 0) {
+                    suggestions.forEach(suggestion => {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion-item';
+                        div.textContent = suggestion.display_name;
+                        div.addEventListener('click', () => {
+                            fromInput.value = suggestion.display_name;
+                            suggestionsDiv.style.display = 'none';
                         });
+                        suggestionsDiv.appendChild(div);
                     });
-                });
-            } else {
-                suggestionsDiv.style.display = 'none';
-            }
-        } catch (error) {
-            console.error('Error fetching suggestions:', error);
-        }
+                    suggestionsDiv.style.display = 'block';
+                } else {
+                    suggestionsDiv.style.display = 'none';
+                }
+            });
     }, 300);
 });
 
@@ -138,89 +138,97 @@ function updateMapLocation(coordinates) {
 }
 
 // Handle form submission
-document.getElementById('searchForm').addEventListener('submit', async (e) => {
+const searchForm = document.getElementById('searchForm');
+
+searchForm.addEventListener('submit', function(e) {
     e.preventDefault();
     
     const formData = {
         from: fromInput.value,
         weather: weatherInput.value,
         date: document.getElementById('date').value,
-        distance: document.getElementById('distance').value
+        distance: distanceSlider.value
     };
 
-    try {
-        const response = await fetch('/search', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        });
-
-        const data = await response.json();
-        
+    fetch('/search', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
         const resultsDiv = document.getElementById('results');
         resultsDiv.innerHTML = '';
-
-        // Clear existing markers
+        // Remove old markers
         markers.forEach(marker => map.removeLayer(marker));
         markers = [];
-        
-        if (data.error) {
-            resultsDiv.innerHTML = `<div class="p-4 bg-red-100 text-red-700 rounded-lg">
-                Error: ${data.error}
-            </div>`;
-            return;
-        }
 
         if (data.length === 0) {
-            resultsDiv.innerHTML = `<div class="p-4 bg-yellow-100 text-yellow-700 rounded-lg">
-                No destinations found matching your criteria.
-            </div>`;
+            resultsDiv.innerHTML = '<p class="text-center text-gray-500">No destinations found matching your criteria.</p>';
             return;
         }
 
-        data.forEach(destination => {
-            const weatherInfo = destination.weather;
-            const temp = weatherInfo.temperature;
-            
-            resultsDiv.innerHTML += `
-                <div class="p-4 bg-gray-50 rounded-lg shadow hover:shadow-md transition-shadow">
-                    <h3 class="font-bold text-lg text-gray-800">${destination.city}, ${destination.region}</h3>
-                    <div class="mt-2">
-                        <p class="text-gray-600">
-                            <i class="fas fa-temperature-high mr-2"></i>
-                            Temperature: ${temp.average}°C (Max: ${temp.max}°C, Min: ${temp.min}°C)
-                        </p>
-                        <p class="text-gray-600">
-                            <i class="fas fa-cloud mr-2"></i>
-                            Condition: ${weatherInfo.condition}
-                        </p>
+        data.forEach((destination, idx) => {
+            // Create result card
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow mb-2 cursor-pointer';
+            card.innerHTML = `
+                <div class="result-card-content">
+                    <div class="result-card-info">
+                        <h3 class="font-bold text-lg">${destination.index}. ${destination.city}</h3>
+                        <p class="text-gray-600">${destination.region}, ${destination.country}</p>
+                        <p class="text-gray-500">${Math.round(destination.distance)} miles away</p>
                     </div>
-                    <p class="text-sm text-gray-500 mt-2">Distance: ${destination.distance} miles</p>
+                    <div class="flex flex-col items-center justify-center">
+                        <div class="weather-icon-result mb-1">
+                            <img src="/weather-icons/${destination.weather.icon_code}.png" 
+                                 alt="${destination.weather.condition}" 
+                                 class="w-12 h-12">
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">${destination.weather.condition}</p>
+                        <p class="text-sm font-semibold">${destination.weather.temperature.average}°C</p>
+                    </div>
                 </div>
             `;
+            resultsDiv.appendChild(card);
 
-            if (destination.coordinates) {
-                const marker = L.marker([destination.coordinates.lat, destination.coordinates.lon])
-                    .bindPopup(`
-                        <b>${destination.city}</b><br>
-                        Temperature: ${temp.average}°C<br>
-                        Condition: ${weatherInfo.condition}
-                    `)
-                    .addTo(map);
-                markers.push(marker);
-            }
+            // Create custom icon for the marker with a visible background
+            const weatherIcon = new WeatherIcon({
+                iconUrl: `/weather-icons/${destination.weather.icon_code}.png`,
+                className: 'weather-marker-icon'
+            });
+
+            // Create marker with custom icon
+            const marker = L.marker([destination.coordinates.lat, destination.coordinates.lon], {
+                icon: weatherIcon
+            })
+            .addTo(map)
+            .bindPopup(`
+                <div class="text-center">
+                    <div class="weather-icon-result inline-block mb-2">
+                        <img src="/weather-icons/${destination.weather.icon_code}.png" 
+                             alt="${destination.weather.condition}" 
+                             class="w-8 h-8">
+                    </div>
+                    <strong>${destination.index}. ${destination.city}</strong><br>
+                    ${destination.region}, ${destination.country}<br>
+                    ${destination.weather.condition}<br>
+                    ${destination.weather.temperature.average}°C
+                </div>
+            `);
+            markers.push(marker);
+
+            // Add click event to card to pan/zoom to marker and open popup
+            card.addEventListener('click', () => {
+                map.setView([destination.coordinates.lat, destination.coordinates.lon], 10, { animate: true });
+                marker.openPopup();
+            });
         });
-
-        if (markers.length > 0) {
-            const group = L.featureGroup(markers);
-            map.fitBounds(group.getBounds().pad(0.1));
-        }
-    } catch (error) {
+    })
+    .catch(error => {
         console.error('Error:', error);
-        resultsDiv.innerHTML = `<div class="p-4 bg-red-100 text-red-700 rounded-lg">
-            An error occurred while searching for destinations.
-        </div>`;
-    }
+        resultsDiv.innerHTML = '<p class="text-center text-red-500">An error occurred while searching for destinations.</p>';
+    });
 });

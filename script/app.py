@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from datetime import datetime
 import json
 import os
@@ -26,8 +26,31 @@ def load_weather_data():
         print("Error: Invalid JSON in weather_data.json")
         return {"weather_data": []}
 
+def load_categorised_weather():
+    """Load categorised weather data"""
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        weather_file = os.path.join(script_dir, '..', 'icons_and_codes', 'categorised_weather.json')
+        with open(weather_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"Error: categorised_weather.json not found at {weather_file}")
+        return {}
+    except json.JSONDecodeError:
+        print("Error: Invalid JSON in categorised_weather.json")
+        return {}
+
 # Load the weather data
 WEATHER_DATA = load_weather_data()
+CATEGORISED_WEATHER = load_categorised_weather()
+
+def get_weather_category(condition_code):
+    """Get the weather category for a given condition code"""
+    for category, conditions in CATEGORISED_WEATHER.items():
+        for condition in conditions:
+            if condition['code'] == condition_code:
+                return category, condition['icon']
+    return None, None
 
 @app.route('/')
 def home():
@@ -89,7 +112,7 @@ def search():
         
         # Find matching destinations from weather data
         matches = []
-        for location_data in WEATHER_DATA.get('weather_data', []):
+        for index, location_data in enumerate(WEATHER_DATA.get('weather_data', []), 1):
             location = location_data['location']
             dest_coords = (location['latitude'], location['longitude'])
             distance = geodesic(start_coords, dest_coords).miles
@@ -98,10 +121,13 @@ def search():
             for forecast in location_data['forecast']:
                 forecast_date = datetime.strptime(forecast['date'], '%Y-%m-%d')
                 if forecast_date.date() == travel_date.date():
-                    # Check if the weather condition matches
-                    condition_text = forecast['condition']['text'].lower()
-                    if desired_weather.lower() in condition_text and distance <= max_distance:
+                    # Get weather category and icon for the condition code
+                    weather_category, icon_code = get_weather_category(forecast['condition']['code'])
+                    
+                    # Check if the weather category matches the desired weather
+                    if weather_category == desired_weather and distance <= max_distance:
                         matches.append({
+                            'index': index,
                             'city': location['name'],
                             'region': location['region'],
                             'country': location['country'],
@@ -112,7 +138,8 @@ def search():
                             },
                             'weather': {
                                 'condition': forecast['condition']['text'],
-                                'temperature': forecast['temperature']
+                                'temperature': forecast['temperature'],
+                                'icon_code': icon_code
                             }
                         })
                     break
@@ -126,6 +153,13 @@ def search():
 def get_weather_data():
     """Return the current weather data"""
     return jsonify(WEATHER_DATA)
+
+@app.route('/weather-icons/<path:filename>')
+def serve_weather_icon(filename):
+    """Serve weather icons from the icons directory"""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    icons_dir = os.path.join(script_dir, '..', 'icons_and_codes', 'weather_icons')
+    return send_from_directory(icons_dir, filename)
 
 if __name__ == '__main__':
     app.run(debug=True)

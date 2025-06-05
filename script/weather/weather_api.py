@@ -80,6 +80,27 @@ def cleanup_weather_data():
         except Exception as e:
             print(f"Error cleaning up {OUTPUT_FILE}: {str(e)}")
 
+def save_weather_data(weather_data):
+    """Save weather data to JSON file"""
+    try:
+        # Clear the existing file by writing an empty structure
+        empty_data = {
+            "grid_size_miles": 8,
+            "total_cells": 0,
+            "weather_data": [],
+            "generated_at": datetime.now().isoformat()
+        }
+        
+        with open('weather_data.json', 'w', encoding='utf-8') as f:
+            json.dump(empty_data, f, indent=2)
+        
+        # Now write the new data
+        with open('weather_data.json', 'w', encoding='utf-8') as f:
+            json.dump(weather_data, f, indent=2)
+        print("Weather data saved successfully")
+    except Exception as e:
+        print(f"Error saving weather data: {str(e)}")
+
 def main():
     # Clean up existing weather data
     cleanup_weather_data()
@@ -126,7 +147,7 @@ def main():
     
     # Randomly select 20 locations from the total cells
     total_cells = locations_data['cells']
-    selected_cells = random.sample(total_cells, min(20, len(total_cells)))
+    selected_cells = random.sample(total_cells, min(35, len(total_cells)))
     
     print(f"Processing weather data for {len(selected_cells)} randomly selected locations...")
     
