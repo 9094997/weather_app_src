@@ -19,8 +19,9 @@
         }
         .form-container {
             position: fixed;
-            top: 20px;
-            left: 20px;
+            top: 40%;
+            left: 65px;
+            transform: translateY(-50%);
             width: 456px;
             background-color: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(5px);
@@ -147,6 +148,83 @@
             border: 2.5px solid #e5e7eb;
             box-shadow: 0 2px 8px rgba(0,0,0,0.18);
         }
+        /* Interactive distance ring styles */
+        .distance-control {
+            position: absolute;
+            background: white;
+            border: 2px solid #3B82F6;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: grab;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: #3B82F6;
+        }
+        .distance-control:active {
+            cursor: grabbing;
+        }
+        .distance-label {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #3B82F6;
+            white-space: nowrap;
+            z-index: 1001;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+        /* Date selector styles */
+        .date-selector {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .date-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            width: 100%;
+        }
+        .date-row.top {
+            margin-bottom: 8px;
+        }
+        .date-option {
+            padding: 8px 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            min-width: 60px;
+            transition: all 0.2s ease;
+            background: white;
+        }
+        .date-option:hover {
+            border-color: #3B82F6;
+            background: #f0f9ff;
+        }
+        .date-option.selected {
+            border-color: #3B82F6;
+            background: #3B82F6;
+            color: white;
+        }
+        .date-option .day-name {
+            font-size: 12px;
+            font-weight: bold;
+            display: block;
+        }
+        .date-option .day-date {
+            font-size: 14px;
+            display: block;
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -202,15 +280,17 @@
             
             <div>
                 <label class="block text-gray-700 text-sm font-bold mb-2">Travel Date:</label>
-                <input type="date" id="date" required
-                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="hidden" id="date" value="">
+                <div id="dateSelector" class="date-selector">
+                    <!-- Date options will be populated by JavaScript -->
+                </div>
             </div>
             
             <div>
                 <label class="block text-gray-700 text-sm font-bold mb-2">
-                    Maximum Distance: <span id="distanceValue">500</span> miles
+                    Maximum Distance: <span id="distanceValue">200</span> miles
                 </label>
-                <input type="range" id="distance" min="1" max="500" value="500" step="1"
+                <input type="range" id="distance" min="1" max="200" value="200" step="1"
                     class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
             </div>
             

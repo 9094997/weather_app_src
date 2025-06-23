@@ -13,32 +13,72 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let markers = [];
 let radiusCircle = null;
 let startPointMarker = null;
+let distanceControl = null;
+let distanceLabel = null;
 
-// Set up date restrictions
-function setupDateRestrictions() {
+// Set up smart date selector for next 7 days
+function setupDateSelector() {
     const dateInput = document.getElementById('date');
+    const dateSelector = document.getElementById('dateSelector');
     const today = new Date();
-    const maxDate = new Date();
-    maxDate.setDate(today.getDate() + 4); // Limit to 4 days as per weather API
     
-    // Format dates as YYYY-MM-DD
-    const formatDate = (date) => {
-        const d = new Date(date);
-        const month = (d.getMonth() + 1).toString().padStart(2, '0');
-        const day = d.getDate().toString().padStart(2, '0');
-        return `${d.getFullYear()}-${month}-${day}`;
-    };
+    // Clear existing options
+    dateSelector.innerHTML = '';
     
-    // Set min and max dates
-    dateInput.min = formatDate(today);
-    dateInput.max = formatDate(maxDate);
+    // Create top row (3 dates)
+    const topRow = document.createElement('div');
+    topRow.className = 'date-row top';
     
-    // Set default value to today
-    dateInput.value = formatDate(today);
+    // Create bottom row (4 dates)
+    const bottomRow = document.createElement('div');
+    bottomRow.className = 'date-row';
+    
+    // Create options for next 7 days
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayName = dayNames[date.getDay()];
+        const dayDate = date.getDate();
+        const month = date.getMonth() + 1;
+        const year = date.getFullYear();
+        const dateString = `${year}-${month.toString().padStart(2, '0')}-${dayDate.toString().padStart(2, '0')}`;
+        
+        const dateOption = document.createElement('div');
+        dateOption.className = 'date-option';
+        if (i === 0) {
+            dateOption.classList.add('selected');
+            dateInput.value = dateString;
+        }
+        dateOption.innerHTML = `
+            <span class="day-name">${dayName}</span>
+            <span class="day-date">${dayDate}</span>
+        `;
+        
+        dateOption.addEventListener('click', () => {
+            // Remove selected class from all options
+            document.querySelectorAll('.date-option').forEach(opt => opt.classList.remove('selected'));
+            // Add selected class to clicked option
+            dateOption.classList.add('selected');
+            // Update hidden input
+            dateInput.value = dateString;
+        });
+        
+        // Add to appropriate row (first 3 to top, last 4 to bottom)
+        if (i < 3) {
+            topRow.appendChild(dateOption);
+        } else {
+            bottomRow.appendChild(dateOption);
+        }
+    }
+    
+    dateSelector.appendChild(topRow);
+    dateSelector.appendChild(bottomRow);
 }
 
 // Call setup function when page loads
-setupDateRestrictions();
+setupDateSelector();
 
 // Create custom icon class
 const WeatherIcon = L.Icon.extend({
@@ -66,16 +106,112 @@ const distanceSlider = document.getElementById('distance');
 const distanceValue = document.getElementById('distanceValue');
 
 function updateDistance(value) {
-    distanceValue.textContent = value;
+    distanceValue.textContent = Math.round(value);
     
     if (radiusCircle) {
         radiusCircle.setRadius(value * 1609.34);
+        updateDistanceControl();
     }
 }
 
 distanceSlider.addEventListener('input', (e) => {
     updateDistance(e.target.value);
 });
+
+// Interactive distance ring functionality
+function createDistanceControl() {
+    if (distanceControl) {
+        document.body.removeChild(distanceControl);
+    }
+    if (distanceLabel) {
+        document.body.removeChild(distanceLabel);
+    }
+    
+    // Create draggable control
+    distanceControl = document.createElement('div');
+    distanceControl.className = 'distance-control';
+    distanceControl.innerHTML = '↔';
+    distanceControl.style.display = 'none';
+    document.body.appendChild(distanceControl);
+    
+    // Create distance label
+    distanceLabel = document.createElement('div');
+    distanceLabel.className = 'distance-label';
+    distanceLabel.style.display = 'none';
+    document.body.appendChild(distanceLabel);
+    
+    let isDragging = false;
+    let startX, startY, startRadius;
+    
+    distanceControl.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startRadius = Math.min(200, parseFloat(distanceSlider.value));
+        distanceControl.style.cursor = 'grabbing';
+        e.preventDefault();
+        e.stopPropagation();
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        const delta = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+        // Determine direction of movement
+        const angle = Math.atan2(deltaY, deltaX);
+        const radiusChange = delta * Math.cos(angle) * 0.3; // More precise calculation
+        
+        const newRadius = Math.max(1, Math.min(200, startRadius + radiusChange));
+        
+        distanceSlider.value = newRadius;
+        updateDistance(newRadius);
+    });
+    
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            distanceControl.style.cursor = 'grab';
+        }
+    });
+}
+
+function updateDistanceControl() {
+    if (!radiusCircle || !distanceControl || !distanceLabel) return;
+    
+    const center = radiusCircle.getLatLng();
+    const radius = radiusCircle.getRadius();
+    
+    // Calculate the position on the edge of the circle (east direction)
+    const edgeLat = center.lat;
+    const edgeLng = center.lng + (radius / (111320 * Math.cos(center.lat * Math.PI / 180)));
+    
+    // Convert to pixel coordinates
+    const centerPoint = map.latLngToContainerPoint(center);
+    const edgePoint = map.latLngToContainerPoint([edgeLat, edgeLng]);
+    
+    // Position the control on the edge
+    distanceControl.style.left = (edgePoint.x - 10) + 'px';
+    distanceControl.style.top = (edgePoint.y - 10) + 'px';
+    distanceControl.style.display = 'block';
+    
+    // Update distance label
+    const labelX = edgePoint.x + 15;
+    const labelY = edgePoint.y - 10;
+    distanceLabel.style.left = labelX + 'px';
+    distanceLabel.style.top = labelY + 'px';
+    distanceLabel.textContent = Math.round(distanceSlider.value) + ' miles';
+    distanceLabel.style.display = 'block';
+}
+
+// Create distance control on page load
+createDistanceControl();
+
+// Update control position when map moves
+map.on('move', updateDistanceControl);
+map.on('zoom', updateDistanceControl);
 
 // Location autocomplete functionality
 const fromInput = document.getElementById('from');
@@ -159,6 +295,9 @@ function updateMapLocation(coordinates) {
     }).addTo(map);
 
     map.setView([coordinates.lat, coordinates.lon], 8);
+    
+    // Update distance control position
+    setTimeout(updateDistanceControl, 100);
 }
 
 // Handle form submission
