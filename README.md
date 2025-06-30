@@ -9,3 +9,4 @@ In 2023, Great Britain (GB) residents took 2.97 billion leisure day trips lastin
 
 Some reference:
 https://www.gov.wales/domestic-gb-tourism-statistics-day-trips-2022-2023-revised-html#:~:text=,98
+https://www.visitbritain.org/research-insights/great-britain-domestic-day-visits-latest-results
