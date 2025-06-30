@@ -4,9 +4,23 @@ import pandas as pd
 # Normalization functions
 # -------------------------------
 
+## here is an instruction of how to read the fomula below:
+## for example for the cloud coverage index:
+
+    # elif value <= 50:
+    #     return 7 + (9 - 7) * (50 - value) / 20
+    
+# this paragraph represent the calculation of cloud coverage index between 30% to 50%, the full scrip can be found below. 
+# 50 represent 50% cloud coverage, 7 is the lowest score for the cloud coverage range between 10% - 30%, (9-7) is the score range for 10%-30%, 9 is the highest.
+# (50-value) measure the distance between the given value and the upper limit of this range, and /20 is the range between 10%-30%, it is the normlisation factor.
+
+# The purpose of this formular is to normalised the weather parameters into an comparable system and find the location of the given value in a pre-set score range
+
+
 def normalize_cloud_comfort(value):
+    ##cloud coverage index
     if value <= 10:
-        return 7 + (10 - 7) * (10 - value) / 10
+        return 7 + (10 - 7) * (10 - value) / 10 ## too much sun and no cloud is not a good thing, there fore we have the range of 7 to 10
     elif value <= 30:
         return 9 + (10 - 9) * (30 - value) / 20
     elif value <= 50:
@@ -17,6 +31,7 @@ def normalize_cloud_comfort(value):
         return max(0, 0 + (4 - 0) * (100 - value) / 20)
 
 def normalize_uv_comfort(value):
+    ##uv index in relation to the comfort index
     if value <= 2:
         return 10
     elif value <= 5:
@@ -29,6 +44,7 @@ def normalize_uv_comfort(value):
         return max(0, 0 + (3 - 0) * (12 - min(value,12)) / 2)
 
 def normalize_visibility_comfort(value):
+    ## the more the better
     if value > 30000:
         return 10
     elif value > 10000:
@@ -41,6 +57,7 @@ def normalize_visibility_comfort(value):
         return 0.0
 
 def normalize_rain_comfort(value):
+    ## no rain is the best, light rain is accetable
     if value == 0.0:
         return 10.0
     elif value <= 0.9:
@@ -53,24 +70,43 @@ def normalize_rain_comfort(value):
         return max(0, 0 + (2 - 0) * (70 - min(value,70)) / 40)
 
 def normalize_snow_comfort(present):
-    return 10.0 if not present else 2.0
+    ## snow is not properly considerd at the moment, we leave this function to the fucture.
+    return 10.0 if not present else 1.0
 
 def normalize_feels_like_temp(value):
-    if 18 <= value <= 24:
+    ## this is the most important factor for the comfort index
+    if 20 <= value <= 26:
         return 10.0
-    elif 10 <= value < 18:
-        return 7 + (9 - 7) * (18 - value) / 8
-    elif 24 < value <= 28:
-        return 7 + (9 - 7) * (28 - value) / 4
-    elif 0 <= value < 10:
-        return 4 + (7 - 4) * (10 - value) / 10
-    elif 28 < value <= 32:
-        return 4 + (7 - 4) * (32 - value) / 4
+    elif 15 <= value < 20:
+        return 7 + (10 - 7) * (20 - value) / 5
+    elif 26 < value <= 30:
+        return 7 + (10 - 7) * (30 - value) / 4
+    elif 10 <= value < 15:
+        return 4 + (7 - 3) * (15 - value) / 5
+    elif 30 < value <= 35:
+        return 4 + (7 - 4) * (35 - value) / 5
     else:
-        if value < 0:
-            return max(0, 0 + (4 - 0) * (0 - value) / 20)
+        if value < 10:
+            return max(0, 0 + (3 - 0) * (10 - value) / 10)
         else:
-            return max(0, 0 + (4 - 0) * (value - 32) / 20)
+            return max(0, 0 + (4 - 0) * (value - 35) / 15)
+
+def normalize_humidity_comfort(value):
+    if 40 <= value <= 60:
+        return 10.0
+    elif 30 <= value < 40:
+        return 7 + (9 - 7) * (40 - value) / 10
+    elif 60 < value <= 70:
+        return 7 + (9 - 7) * (70 - value) / 10
+    elif 20 <= value < 30:
+        return 4 + (7 - 4) * (30 - value) / 10
+    elif 70 < value <= 80:
+        return 4 + (7 - 4) * (80 - value) / 10
+    else:
+        if value < 20:
+            return max(0, 0 + (4 - 0) * (20 - value) / 20)
+        else:
+            return max(0, 0 + (4 - 0) * (100 - min(value,100)) / 20)
 
 # -------------------------------
 # Final classification
@@ -99,8 +135,9 @@ def calculate_comfort_score(row):
     rain = normalize_rain_comfort(row['rain_mm'])
     snow = normalize_snow_comfort(row['snow_present'])
     feels = normalize_feels_like_temp(row['feels_like_temp'])
+    humidity = normalize_humidity_comfort(row['humidity'])
 
-    final_score = round((cloud + uv + vis + rain + snow + feels) / 6, 2)
+    final_score = round((cloud + uv + vis + rain + snow + feels + humidity) / 7, 2)
     level = classify_comfort_level(final_score)
 
     return pd.Series({
@@ -110,26 +147,26 @@ def calculate_comfort_score(row):
         'Rain_Score': round(rain, 2),
         'Snow_Score': round(snow, 2),
         'FeelsLikeTemp_Score': round(feels, 2),
+        'Humidity_Score': round(humidity, 2),
         'Comfort_Score': final_score,
         'Comfort_Level': level
     })
 
 # -------------------------------
-# Example batch usage
+# Example usage
 # -------------------------------
 
-if __name__ == "__main__":
-    # Example dataset
-    data = [
-        {'location': 'Loc1', 'cloud_coverage': 20, 'uv_index': 5, 'visibility_m': 25000, 'rain_mm': 0.0, 'snow_present': False, 'feels_like_temp': 22},
-        {'location': 'Loc2', 'cloud_coverage': 80, 'uv_index': 1, 'visibility_m': 2000, 'rain_mm': 10.0, 'snow_present': True, 'feels_like_temp': -5},
-        {'location': 'Loc3', 'cloud_coverage': 5,  'uv_index': 7, 'visibility_m': 45000, 'rain_mm': 0.5, 'snow_present': False, 'feels_like_temp': 30},
-    ]
+# if __name__ == "__main__":
+#     data = [
+#         {'location': 'Loc1', 'cloud_coverage': 20, 'uv_index': 5, 'visibility_m': 25000, 'rain_mm': 0.0, 'snow_present': False, 'feels_like_temp': 22, 'humidity': 50},
+#         {'location': 'Loc2', 'cloud_coverage': 80, 'uv_index': 1, 'visibility_m': 2000, 'rain_mm': 10.0, 'snow_present': True, 'feels_like_temp': -5, 'humidity': 85},
+#         {'location': 'Loc3', 'cloud_coverage': 5,  'uv_index': 7, 'visibility_m': 45000, 'rain_mm': 0.5, 'snow_present': False, 'feels_like_temp': 30, 'humidity': 65},
+#     ]
 
-    df = pd.DataFrame(data)
-    results = df.apply(calculate_comfort_score, axis=1)
-    df_final = pd.concat([df, results], axis=1)
+#     df = pd.DataFrame(data)
+#     results = df.apply(calculate_comfort_score, axis=1)
+#     df_final = pd.concat([df, results], axis=1)
 
-    print(df_final[['location', 'Comfort_Score', 'Comfort_Level',
-                    'Cloud_Score', 'UV_Score', 'Visibility_Score',
-                    'Rain_Score', 'Snow_Score', 'FeelsLikeTemp_Score']])
+    # print(df_final[['location', 'Comfort_Score', 'Comfort_Level',
+    #                 'Cloud_Score', 'UV_Score', 'Visibility_Score',
+    #                 'Rain_Score', 'Snow_Score', 'FeelsLikeTemp_Score', 'Humidity_Score']])

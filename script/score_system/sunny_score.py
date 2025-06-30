@@ -1,5 +1,8 @@
 import pandas as pd
 
+
+## Please check the comfor_index  file first for an explanation of the formular.
+
 def normalize_cloud_coverage(value):
     if value <= 10:
         return 10.0
@@ -16,13 +19,13 @@ def normalize_uv_index(value):
     if value <= 2:
         return value * 2  # up to 4
     elif value <= 5:
-        return 5 + (8 - 5) * (value - 3) / (5 - 3)
+        return 4 + (8 - 4) * (value - 2) / (5 - 2)
     elif value <= 7:
         return 8 + (10 - 8) * (value - 5) / (7 - 5)
     elif value <= 10:
-        return 6 + (8 - 6) * (10 - value) / (10 - 7)
+        return 10.0
     else:
-        return 4 + (6 - 4) * (12 - min(value, 12)) / (12 - 10)
+        return 10.0
 
 def normalize_visibility(value):
     if value > 30000:
@@ -37,6 +40,7 @@ def normalize_visibility(value):
         return 0.0
 
 def normalize_rain(value):
+      ## the gap between 8 and 9 represent the unwilliness to have rain
     if value == 0.0:
         return 10.0
     elif value <= 0.9:
@@ -49,6 +53,7 @@ def normalize_rain(value):
         return 0.0
 
 def normalize_snow(present):
+      ## we need to revisit this logic here, in some rare case what if someone would like a bit of snow? This can be like a easter egg function for the broswer mode. 
     return 10.0 if not present else 0.0
 
 def classify_sunny_level(score):
