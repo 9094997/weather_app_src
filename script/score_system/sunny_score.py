@@ -1,4 +1,5 @@
 import pandas as pd
+from datetime import datetime
 
 
 ## Please check the comfor_index  file first for an explanation of the formular.
@@ -87,6 +88,133 @@ def calculate_sunny_score(row):
         'Sunny_Score': final_score,
         'Sunny_Level': level
     })
+
+def calculate_destination_sunny_score(location_data, target_date, start_hour=9, end_hour=17):
+    """
+    Calculate sunny score for a destination on a specific date and time range.
+    
+    Args:
+        location_data: Dictionary containing location and forecast data
+        target_date: Target date as datetime.date object
+        start_hour: Start hour for time range (default: 9)
+        end_hour: End hour for time range (default: 17)
+    
+    Returns:
+        Dictionary with sunny score and breakdown, or None if no data available
+    """
+    # Find the forecast for the target date
+    target_date_str = target_date.strftime('%Y-%m-%d')
+    
+    for forecast in location_data['forecast']:
+        if forecast['date'] == target_date_str:
+            # Filter hourly data for the specified time range
+            filtered_hours = []
+            for hour_data in forecast['hourly']:
+                hour = datetime.strptime(hour_data['time'], '%Y-%m-%d %H:%M').hour
+                if start_hour <= hour <= end_hour:
+                    filtered_hours.append(hour_data)
+            
+            if not filtered_hours:
+                return None
+            
+            # Calculate average values for the time range
+            total_cloud = sum(h['cloud'] for h in filtered_hours)
+            total_uv = sum(h['uv'] for h in filtered_hours)
+            total_visibility = sum(h['vis_km'] * 1000 for h in filtered_hours)  # Convert km to meters
+            total_rain = sum(h['precip_mm'] for h in filtered_hours)
+            total_snow = sum(1 for h in filtered_hours if h.get('will_it_snow', 0) > 0)
+            
+            avg_cloud = total_cloud / len(filtered_hours)
+            avg_uv = total_uv / len(filtered_hours)
+            avg_visibility = total_visibility / len(filtered_hours)
+            avg_rain = total_rain / len(filtered_hours)
+            snow_present = total_snow > 0
+            
+            # Create a row for the sunny score calculation
+            row = {
+                'cloud_coverage': avg_cloud,
+                'uv_index': avg_uv,
+                'visibility_m': avg_visibility,
+                'rain_mm': avg_rain,
+                'snow_present': snow_present
+            }
+            
+            # Calculate sunny score
+            scores = calculate_sunny_score(row)
+            
+            return {
+                'sunny_score': scores['Sunny_Score'],
+                'sunny_level': scores['Sunny_Level'],
+                'cloud_score': scores['Cloud_Score'],
+                'uv_score': scores['UV_Score'],
+                'visibility_score': scores['Visibility_Score'],
+                'rain_score': scores['Rain_Score'],
+                'snow_score': scores['Snow_Score'],
+                'time_range': f"{start_hour:02d}:00-{end_hour:02d}:00",
+                'hourly_data': filtered_hours
+            }
+    
+    return None
+
+def get_top_sunny_destinations(weather_data, target_date, start_hour=9, end_hour=17, max_distance=None, start_coords=None):
+    """
+    Get top 10 destinations with highest sunny scores.
+    
+    Args:
+        weather_data: Weather data dictionary
+        target_date: Target date as datetime.date object
+        start_hour: Start hour for time range
+        end_hour: End hour for time range
+        max_distance: Maximum distance in miles (optional)
+        start_coords: Starting coordinates as (lat, lon) tuple (optional)
+    
+    Returns:
+        List of top 10 destinations sorted by sunny score
+    """
+    from geopy.distance import geodesic
+    
+    destinations = []
+    
+    for index, location_data in enumerate(weather_data.get('weather_data', []), 1):
+        location = location_data['location']
+        dest_coords = (location['latitude'], location['longitude'])
+        
+        # Check distance if specified
+        if max_distance and start_coords:
+            distance = geodesic(start_coords, dest_coords).miles
+            if distance > max_distance:
+                continue
+        else:
+            distance = 0
+        
+        # Calculate sunny score
+        sunny_data = calculate_destination_sunny_score(location_data, target_date, start_hour, end_hour)
+        
+        if sunny_data:
+            destinations.append({
+                'index': index,
+                'city': location['name'],
+                'region': location['region'],
+                'country': location['country'],
+                'distance': round(distance, 1) if distance > 0 else None,
+                'coordinates': {
+                    'lat': location['latitude'],
+                    'lon': location['longitude']
+                },
+                'sunny_score': sunny_data['sunny_score'],
+                'sunny_level': sunny_data['sunny_level'],
+                'cloud_score': sunny_data['cloud_score'],
+                'uv_score': sunny_data['uv_score'],
+                'visibility_score': sunny_data['visibility_score'],
+                'rain_score': sunny_data['rain_score'],
+                'snow_score': sunny_data['snow_score'],
+                'time_range': sunny_data['time_range'],
+                'hourly_data': sunny_data['hourly_data']
+            })
+    
+    # Sort by sunny score (highest first) and return top 10
+    destinations.sort(key=lambda x: x['sunny_score'], reverse=True)
+    return destinations[:10]
 
 # # Example batch
 # data = [

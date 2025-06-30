@@ -1,0 +1,281 @@
+/* Map container styles */
+#map {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+/* Form container styles */
+.form-container {
+    position: fixed;
+    top: 40%;
+    left: 65px;
+    transform: translateY(-50%);
+    width: 456px;
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(5px);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+}
+
+/* Location autocomplete styles */
+.location-wrapper {
+    position: relative;
+}
+
+.location-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-top: none;
+    border-radius: 0 0 1rem 1rem;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1001;
+    display: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.suggestion-item {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.suggestion-item:hover {
+    background-color: #f7fafc;
+}
+
+/* Hide Leaflet zoom control */
+.leaflet-control-zoom {
+    display: none !important;
+}
+
+/* Custom scrollbar */
+.form-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.form-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.form-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+/* Sunny score styles */
+.sunny-score-circle {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    border-radius: 50%;
+    padding: 8px;
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    min-height: 48px;
+}
+
+.sunny-score-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sunny-marker-icon {
+    background: radial-gradient(circle, #fbbf24 70%, #f59e0b 100%);
+    border-radius: 50%;
+    border: 2.5px solid #f59e0b;
+    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.4);
+}
+
+.result-card-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.result-card-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Map marker popup */
+.leaflet-popup-content {
+    background: linear-gradient(135deg, #fff, #e5e7eb 80%);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Interactive distance ring styles */
+.distance-control {
+    position: absolute;
+    background: white;
+    border: 2px solid #3B82F6;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    cursor: grab;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    color: #3B82F6;
+    pointer-events: auto;
+    user-select: none;
+}
+
+.distance-control:active {
+    cursor: grabbing;
+}
+
+.distance-control-handle {
+    width: 8px;
+    height: 8px;
+    background: #3B82F6;
+    border-radius: 50%;
+}
+
+.distance-label {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #3B82F6;
+    white-space: nowrap;
+    z-index: 1001;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    pointer-events: none;
+    user-select: none;
+}
+
+.distance-label-content {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.distance-value {
+    font-weight: bold;
+}
+
+.distance-unit {
+    font-size: 10px;
+    opacity: 0.8;
+}
+
+/* Date selector styles */
+.date-selector {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.date-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    width: 100%;
+}
+
+.date-row.top {
+    margin-bottom: 8px;
+}
+
+.date-option {
+    padding: 8px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    min-width: 60px;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.date-option:hover {
+    border-color: #3B82F6;
+    background: #f0f9ff;
+}
+
+.date-option.selected {
+    border-color: #3B82F6;
+    background: #3B82F6;
+    color: white;
+}
+
+.date-option .day-name {
+    font-size: 12px;
+    font-weight: bold;
+    display: block;
+}
+
+.date-option .day-date {
+    font-size: 14px;
+    display: block;
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3B82F6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Error states */
+.error-message {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 8px 0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .form-container {
+        left: 20px;
+        right: 20px;
+        width: auto;
+        max-width: none;
+    }
+    
+    .date-option {
+        min-width: 50px;
+        padding: 6px 8px;
+    }
+} 
