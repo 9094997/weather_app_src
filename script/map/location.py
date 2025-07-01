@@ -14,7 +14,8 @@ from tqdm import tqdm
 
 def download_world_data():
     """Download the world countries shapefile"""
-    data_dir = Path("map_data")
+    # Save map_data inside the map directory
+    data_dir = Path(__file__).parent / "map_data"
     data_dir.mkdir(exist_ok=True)
     
     url = "https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.zip"
@@ -139,7 +140,9 @@ def generate_and_visualize_uk_ireland_grid():
     
     print(f"Generated {len(grid_cells)} grid cells")
     
-    with open('script/map/uk_location_list.json', 'w') as f:
+    # Save locations.json inside the map directory
+    output_json_path = Path(__file__).parent / 'locations.json'
+    with open(output_json_path, 'w') as f:
         json.dump(output, f, indent=2)
     
     # Visualization part
@@ -200,13 +203,14 @@ def generate_and_visualize_uk_ireland_grid():
         spine.set_visible(True)
     
     # Save the plot
-    plt.savefig('script/map/uk_ireland_grid_visualization.png', 
+    plot_path = Path(__file__).parent / 'uk_ireland_grid_visualization.png'
+    plt.savefig(plot_path, 
                 dpi=300, 
                 bbox_inches='tight',
                 facecolor='white')
     plt.close()
     
-    print("Completed! Files saved: uk_ireland_grid_8mile.json and uk_ireland_grid_visualization.png")
+    print("Completed! Files saved: locations.json and uk_ireland_grid_visualization.png")
 
 if __name__ == "__main__":
     # Run the combined function

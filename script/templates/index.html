@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sunny Destination Finder</title>
+    <title>Weather Destination Finder</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -52,7 +52,7 @@
 
     <!-- Floating form -->
     <div class="form-container p-6">
-        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Find Your Sunny Destination</h1>
+        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Find Your Perfect Destination</h1>
         
         <form id="searchForm" class="space-y-6">
             <div class="location-wrapper">
@@ -74,7 +74,7 @@
             
             <div>
                 <label class="block text-gray-700 text-sm font-bold mb-2">Travel Hours:</label>
-                <div style="width: 100%; margin: 20px 0;">
+                <div class="time-range-container">
                   <div id="time-range-slider"></div>
                   <div class="flex justify-between mt-2">
                     <span id="start-time-label"></span>
@@ -95,7 +95,7 @@
             
             <button type="submit" id="searchButton"
                 class="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">
-                <span id="searchButtonText">Find Sunny Destinations</span>
+                <span id="searchButtonText">Find Destinations</span>
                 <span id="searchButtonSpinner" class="loading-spinner ml-2" style="display: none;"></span>
             </button>
         </form>

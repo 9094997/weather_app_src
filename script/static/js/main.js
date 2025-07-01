@@ -22,12 +22,13 @@ const CONFIG = {
 const AppState = {
     map: null,
     markers: [],
-    radiusCircle: null,
     startPointMarker: null,
-    distanceControl: null,
-    distanceLabel: null,
+    distanceCircleManager: null,
     isLoading: false,
-    currentSearch: null
+    currentSearch: null,
+    currentTab: null,
+    tabButtons: null,
+    debouncedFunctions: new Set() // Track debounced functions for cleanup
 };
 
 // Utility functions
@@ -57,32 +58,70 @@ const Utils = {
             buttonSpinner.style.display = 'inline-block';
         } else {
             button.classList.remove('loading');
-            buttonText.textContent = 'Find Sunny Destinations';
+            buttonText.textContent = 'Find Destinations';
             buttonSpinner.style.display = 'none';
         }
     },
 
     showError(message, containerId = 'results') {
         const container = document.getElementById(containerId);
-        container.innerHTML = `
-            <div class="error-message">
-                <i class="fas fa-exclamation-triangle mr-2"></i>
-                ${message}
-            </div>
-        `;
+        if (!container) return;
+        
+        const errorDiv = Utils.createElement('div', 'error-message');
+        const icon = Utils.createElement('i', 'fas fa-exclamation-triangle mr-2');
+        const text = document.createTextNode(message);
+        
+        errorDiv.appendChild(icon);
+        errorDiv.appendChild(text);
+        container.appendChild(errorDiv);
     },
 
     clearResults() {
         const resultsDiv = document.getElementById('results');
-        resultsDiv.innerHTML = '';
+        if (resultsDiv) {
+            resultsDiv.innerHTML = '';
+        }
+        
+        // Clean up scroll to top button
+        if (AppState.scrollToTopBtn) {
+            AppState.scrollToTopBtn.remove();
+            AppState.scrollToTopBtn = null;
+        }
         
         // Remove old markers
         AppState.markers.forEach(marker => {
-            if (AppState.map.hasLayer(marker)) {
+            if (AppState.map && AppState.map.hasLayer(marker)) {
                 AppState.map.removeLayer(marker);
             }
         });
         AppState.markers = [];
+    },
+    
+    // Safe DOM element creation with error handling
+    createElement(tag, className, innerHTML = '') {
+        try {
+            const element = document.createElement(tag);
+            if (className) {
+                element.className = className;
+            }
+            if (innerHTML) {
+                element.innerHTML = innerHTML;
+            }
+            return element;
+        } catch (error) {
+            console.error('Error creating element:', error);
+            return null;
+        }
+    },
+    
+    // Safe element querying with error handling
+    getElement(id) {
+        try {
+            return document.getElementById(id);
+        } catch (error) {
+            console.error(`Error getting element with id '${id}':`, error);
+            return null;
+        }
     }
 };
 
@@ -96,11 +135,8 @@ function initializeMap() {
         attribution: CONFIG.MAP.ATTRIBUTION
     }).addTo(AppState.map);
 
-    // Update control position when map moves
-    AppState.map.on('move', updateDistanceControl);
-    AppState.map.on('zoom', updateDistanceControl);
-    AppState.map.on('moveend', updateDistanceControl);
-    AppState.map.on('zoomend', updateDistanceControl);
+    // Initialize distance circle manager
+    AppState.distanceCircleManager = new DistanceCircleManager(AppState.map);
 }
 
 // Set up smart date selector for next 7 days
@@ -173,128 +209,131 @@ const WeatherIcon = L.Icon.extend({
     }
 });
 
+// Distance circle management
+class DistanceCircleManager {
+    constructor(map) {
+        this.map = map;
+        this.circle = null;
+        this.center = null;
+        this.radius = 200; // miles
+        this.handleMarker = null;
+        this.isDragging = false;
+        this.init();
+    }
+
+    init() {
+        // No DOM controls needed
+        this.setupMapEvents();
+    }
+
+    setupMapEvents() {
+        this.map.on('zoom move resize', () => this.updateHandlePosition());
+    }
+
+    setCenter(lat, lng) {
+        this.center = { lat, lng };
+        this.updateCircle();
+        this.updateHandlePosition();
+    }
+
+    setRadius(radius) {
+        this.radius = radius;
+        this.updateCircle();
+        this.updateHandlePosition();
+        this.updateFormSlider();
+    }
+
+    updateCircle() {
+        if (!this.center) return;
+        if (this.circle) this.map.removeLayer(this.circle);
+        this.circle = L.circle([this.center.lat, this.center.lng], {
+            radius: this.radius * 1609.34,
+            color: '#3B82F6',
+            fillColor: '#93C5FD',
+            fillOpacity: 0.2,
+            weight: 2
+        }).addTo(this.map);
+    }
+
+    updateHandlePosition() {
+        if (!this.center) return;
+        // Calculate the LatLng for the handle at the edge of the circle (3 o'clock, 90 degrees)
+        const angleRad = Math.PI / 2; // 3 o'clock position (90 degrees)
+        const earthRadius = 6378137; // meters
+        const d = this.radius * 1609.34; // meters
+        const lat1 = this.center.lat * Math.PI / 180;
+        const lng1 = this.center.lng * Math.PI / 180;
+        const lat2 = Math.asin(Math.sin(lat1) * Math.cos(d / earthRadius) + Math.cos(lat1) * Math.sin(d / earthRadius) * Math.cos(angleRad));
+        const lng2 = lng1 + Math.atan2(Math.sin(angleRad) * Math.sin(d / earthRadius) * Math.cos(lat1), Math.cos(d / earthRadius) - Math.sin(lat1) * Math.sin(lat2));
+        const handleLat = lat2 * 180 / Math.PI;
+        const handleLng = lng2 * 180 / Math.PI;
+
+        // Create or move the handle marker
+        if (!this.handleMarker) {
+            this.handleMarker = L.marker([handleLat, handleLng], {
+                draggable: true,
+                icon: L.divIcon({
+                    className: 'distance-handle-marker',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15],
+                    html: '<div class="distance-control-handle"></div>'
+                })
+            }).addTo(this.map);
+            this.handleMarker.on('drag', (e) => this.onHandleDrag(e));
+        } else {
+            this.handleMarker.setLatLng([handleLat, handleLng]);
+        }
+
+        // Update or add tooltip
+        if (!this.handleMarker.getTooltip()) {
+            this.handleMarker.bindTooltip(
+                () => `${this.radius} miles`,
+                { permanent: true, direction: 'right', className: 'distance-label-tooltip' }
+            ).openTooltip();
+        } else {
+            this.handleMarker.setTooltipContent(`${this.radius} miles`);
+        }
+    }
+
+    onHandleDrag(e) {
+        if (!this.center) return;
+        const handleLatLng = e.target.getLatLng();
+        const centerLatLng = L.latLng(this.center.lat, this.center.lng);
+        const meters = centerLatLng.distanceTo(handleLatLng);
+        const miles = Math.round(meters / 1609.34);
+        this.setRadius(Math.max(1, Math.min(200, miles)));
+    }
+
+    updateFormSlider() {
+        const slider = document.getElementById('distance');
+        const valueDisplay = document.getElementById('distanceValue');
+        if (slider) slider.value = this.radius;
+        if (valueDisplay) valueDisplay.textContent = this.radius;
+    }
+
+    hide() {
+        if (this.circle) this.map.removeLayer(this.circle);
+        if (this.handleMarker) this.map.removeLayer(this.handleMarker);
+    }
+
+    destroy() {
+        this.hide();
+        this.map.off('zoom move resize');
+    }
+}
+
 // Update distance value display and map radius
 function updateDistance(value) {
-    const distanceValue = document.getElementById('distanceValue');
-    distanceValue.textContent = Math.round(value);
-    
-    if (AppState.radiusCircle) {
-        AppState.radiusCircle.setRadius(value * 1609.34);
-        updateDistanceControl();
+    if (AppState.distanceCircleManager) {
+        AppState.distanceCircleManager.setRadius(parseInt(value));
     }
 }
 
-// Interactive distance ring functionality
-function createDistanceControl() {
-    // Clean up existing controls if they exist
-    if (AppState.distanceControl) {
-        document.body.removeChild(AppState.distanceControl);
-    }
-    if (AppState.distanceLabel) {
-        document.body.removeChild(AppState.distanceLabel);
-    }
-    
-    // Create distance control element
-    AppState.distanceControl = document.createElement('div');
-    AppState.distanceControl.className = 'distance-control';
-    AppState.distanceControl.innerHTML = `
-        <div class="distance-control-handle"></div>
-    `;
-    AppState.distanceControl.style.display = 'none'; // Initially hidden
-    document.body.appendChild(AppState.distanceControl);
-
-    // Create distance label
-    AppState.distanceLabel = document.createElement('div');
-    AppState.distanceLabel.className = 'distance-label';
-    AppState.distanceLabel.innerHTML = `
-        <div class="distance-label-content">
-            <span class="distance-value">200</span>
-            <span class="distance-unit">miles</span>
-        </div>
-    `;
-    AppState.distanceLabel.style.display = 'none'; // Initially hidden
-    document.body.appendChild(AppState.distanceLabel);
-
-    let isDragging = false;
-    let startY = 0;
-    let startDistance = 0;
-
-    const handleMouseDown = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        isDragging = true;
-        startY = e.clientY;
-        startDistance = parseInt(document.getElementById('distance').value);
-        document.body.style.userSelect = 'none';
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-    };
-
-    const handleMouseMove = (e) => {
-        if (!isDragging) return;
-        
-        const deltaY = startY - e.clientY;
-        const distanceChange = Math.round(deltaY / 2);
-        const newDistance = Math.max(1, Math.min(200, startDistance + distanceChange));
-        
-        document.getElementById('distance').value = newDistance;
-        updateDistance(newDistance);
-    };
-
-    const handleMouseUp = () => {
-        isDragging = false;
-        document.body.style.userSelect = '';
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    AppState.distanceControl.addEventListener('mousedown', handleMouseDown);
-    AppState.cleanupDistanceControl = () => {
-        AppState.distanceControl.removeEventListener('mousedown', handleMouseDown);
-    };
-}
-
+// Update distance control position after map changes
 function updateDistanceControl() {
-    if (!AppState.distanceControl || !AppState.radiusCircle) return;
-    
-    const mapContainer = AppState.map.getContainer();
-    const mapRect = mapContainer.getBoundingClientRect();
-    const center = AppState.map.latLngToContainerPoint(AppState.radiusCircle.getLatLng());
-    
-    // Check if the center point is within the visible map area
-    if (center.x < 0 || center.x > mapRect.width || center.y < 0 || center.y > mapRect.height) {
-        // Hide controls if center is not visible
-        AppState.distanceControl.style.display = 'none';
-        AppState.distanceLabel.style.display = 'none';
-        return;
+    if (AppState.distanceCircleManager) {
+        AppState.distanceCircleManager.updateHandlePosition();
     }
-    
-    // Show controls if they were hidden
-    AppState.distanceControl.style.display = 'flex';
-    AppState.distanceLabel.style.display = 'block';
-    
-    // Position the distance control at the edge of the circle
-    const radius = AppState.radiusCircle.getRadius() / AppState.map.getMetersPerPixel();
-    const angle = Math.PI / 4; // 45 degrees
-    const x = center.x + radius * Math.cos(angle);
-    const y = center.y - radius * Math.sin(angle);
-    
-    // Ensure the control stays within the map bounds
-    const controlX = Math.max(10, Math.min(mapRect.width - 10, mapRect.left + x - 10));
-    const controlY = Math.max(10, Math.min(mapRect.height - 10, mapRect.top + y - 10));
-    
-    AppState.distanceControl.style.left = `${controlX}px`;
-    AppState.distanceControl.style.top = `${controlY}px`;
-    
-    // Position the distance label
-    const labelX = Math.max(10, Math.min(mapRect.width - 60, mapRect.left + x + 20));
-    const labelY = Math.max(10, Math.min(mapRect.height - 20, mapRect.top + y - 15));
-    
-    AppState.distanceLabel.style.left = `${labelX}px`;
-    AppState.distanceLabel.style.top = `${labelY}px`;
-    
-    const distanceValue = document.getElementById('distance').value;
-    AppState.distanceLabel.querySelector('.distance-value').textContent = distanceValue;
 }
 
 // Location autocomplete functionality
@@ -344,6 +383,9 @@ function setupLocationAutocomplete() {
         }
     }, CONFIG.API.DEBOUNCE_DELAY);
     
+    // Store the debounced function for cleanup
+    fromInput._debouncedSearch = debouncedSearch;
+    
     fromInput.addEventListener('input', (e) => {
         debouncedSearch(e.target.value);
     });
@@ -357,10 +399,7 @@ function setupLocationAutocomplete() {
 }
 
 function updateMapLocation(coordinates) {
-    // Remove existing radius circle and start point marker
-    if (AppState.radiusCircle) {
-        AppState.map.removeLayer(AppState.radiusCircle);
-    }
+    // Remove existing start point marker
     if (AppState.startPointMarker) {
         AppState.map.removeLayer(AppState.startPointMarker);
     }
@@ -377,19 +416,12 @@ function updateMapLocation(coordinates) {
         icon: startIcon
     }).addTo(AppState.map);
 
-    // Create radius circle
-    AppState.radiusCircle = L.circle([coordinates.lat, coordinates.lon], {
-        radius: document.getElementById('distance').value * 1609.34,
-        color: '#3B82F6',
-        fillColor: '#93C5FD',
-        fillOpacity: 0.2,
-        weight: 2
-    }).addTo(AppState.map);
+    // Update distance circle center
+    if (AppState.distanceCircleManager) {
+        AppState.distanceCircleManager.setCenter(coordinates.lat, coordinates.lon);
+    }
 
     AppState.map.setView([coordinates.lat, coordinates.lon], 8);
-    
-    // Update distance control position
-    setTimeout(updateDistanceControl, 100);
 }
 
 // Handle form submission
@@ -442,9 +474,11 @@ function setupFormSubmission() {
 
             const data = await response.json();
 
-            if (data.length === 0) {
-                document.getElementById('results').innerHTML = 
-                    '<p class="text-center text-gray-500">No sunny destinations found within your criteria.</p>';
+            if (!data.sunny_destinations || data.sunny_destinations.length === 0) {
+                const resultsDiv = document.getElementById('results');
+                if (resultsDiv) {
+                    resultsDiv.innerHTML = '<p class="text-center text-gray-500">No destinations found within your criteria.</p>';
+                }
                 return;
             }
 
@@ -463,46 +497,180 @@ function setupFormSubmission() {
     });
 }
 
-// Display search results
+// Display search results with tabs
 function displayResults(data) {
     const resultsDiv = document.getElementById('results');
+    if (!resultsDiv) return;
+    
+    // Validate data
+    if (!data.sunny_destinations || !data.comfortable_destinations) {
+        Utils.showError('Invalid data received from server');
+        return;
+    }
+    
+    // Create tabs container
+    const tabsContainer = document.createElement('div');
+    tabsContainer.className = 'mb-6';
+    
+    // Create tab buttons
+    const tabButtons = document.createElement('div');
+    tabButtons.className = 'flex border-b border-gray-200 mb-4';
+    
+    const sunnyTab = document.createElement('button');
+    sunnyTab.className = 'px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600 bg-white';
+    sunnyTab.textContent = `Sunny Destinations (${data.sunny_destinations.length})`;
+    sunnyTab.onclick = () => switchTab('sunny', data);
+    
+    const comfortTab = document.createElement('button');
+    comfortTab.className = 'px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300';
+    comfortTab.textContent = `Comfortable Destinations (${data.comfortable_destinations.length})`;
+    comfortTab.onclick = () => switchTab('comfort', data);
+    
+    tabButtons.appendChild(sunnyTab);
+    tabButtons.appendChild(comfortTab);
+    tabsContainer.appendChild(tabButtons);
+    
+    // Create content container
+    const contentContainer = document.createElement('div');
+    contentContainer.id = 'tab-content';
+    tabsContainer.appendChild(contentContainer);
+    
+    resultsDiv.appendChild(tabsContainer);
+    
+    // Show sunny destinations by default
+    displaySunnyDestinations(data.sunny_destinations);
+    
+    // Store tab state
+    AppState.currentTab = 'sunny';
+    AppState.tabButtons = { sunny: sunnyTab, comfort: comfortTab };
 
-    data.forEach((destination, idx) => {
+    if (AppState.distanceCircleManager && AppState.distanceCircleManager.center) {
+        AppState.distanceCircleManager.show();
+    }
+}
+
+function switchTab(tabName, data) {
+    // Update tab button styles
+    Object.values(AppState.tabButtons).forEach(btn => {
+        btn.className = 'px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300';
+    });
+    
+    AppState.tabButtons[tabName].className = 'px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600 bg-white';
+    
+    // Clear existing markers
+    AppState.markers.forEach(marker => {
+        if (AppState.map.hasLayer(marker)) {
+            AppState.map.removeLayer(marker);
+        }
+    });
+    AppState.markers = [];
+    
+    // Display appropriate destinations
+    if (tabName === 'sunny') {
+        displaySunnyDestinations(data.sunny_destinations);
+    } else {
+        displayComfortableDestinations(data.comfortable_destinations);
+    }
+    
+    AppState.currentTab = tabName;
+
+    if (AppState.distanceCircleManager && AppState.distanceCircleManager.center) {
+        AppState.distanceCircleManager.show();
+    }
+}
+
+function displaySunnyDestinations(destinations) {
+    displayDestinations(destinations, 'sunny');
+}
+
+function displayComfortableDestinations(destinations) {
+    displayDestinations(destinations, 'comfort');
+}
+
+function displayDestinations(destinations, type) {
+    const contentContainer = document.getElementById('tab-content');
+    if (!contentContainer) return;
+    
+    contentContainer.innerHTML = '';
+    
+    // Add results counter
+    const resultsCounter = document.createElement('div');
+    resultsCounter.className = 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200';
+    resultsCounter.innerHTML = `
+        <div class="flex items-center justify-between">
+            <span class="text-sm font-medium text-blue-800">
+                Showing ${destinations.length} destinations
+            </span>
+            <span class="text-xs text-blue-600">
+                Click any destination to center the map
+            </span>
+        </div>
+    `;
+    contentContainer.appendChild(resultsCounter);
+    
+    const config = {
+        sunny: {
+            icon: 'fas fa-sun',
+            iconColor: 'text-yellow-500',
+            scoreClass: 'sunny-score-circle',
+            markerClass: 'sunny-marker-icon',
+            scoreKey: 'sunny_score',
+            levelKey: 'sunny_level',
+            gradient: 'from-yellow-400 to-orange-500',
+            textColor: 'text-yellow-600',
+            label: 'Sunny Score'
+        },
+        comfort: {
+            icon: 'fas fa-thermometer-half',
+            iconColor: 'text-green-500',
+            scoreClass: 'comfort-score-circle',
+            markerClass: 'comfort-marker-icon',
+            scoreKey: 'comfort_score',
+            levelKey: 'comfort_level',
+            gradient: 'from-green-400 to-blue-500',
+            textColor: 'text-green-600',
+            label: 'Comfort Score'
+        }
+    };
+    
+    const typeConfig = config[type];
+    
+    destinations.forEach((destination, idx) => {
         // Create result card
         const card = document.createElement('div');
-        card.className = 'bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow mb-2 cursor-pointer';
+        card.className = 'bg-white rounded-lg shadow-md p-3 hover:shadow-lg transition-shadow mb-2 cursor-pointer';
         card.innerHTML = `
             <div class="result-card-content">
                 <div class="result-card-info">
-                    <h3 class="font-bold text-lg">${destination.index}. ${destination.city}</h3>
+                    <h3 class="font-bold text-lg">${destination.city}</h3>
                     <p class="text-gray-600">${destination.region}, ${destination.country}</p>
                     <p class="text-gray-500">${Math.round(destination.distance)} miles away</p>
-                    <div class="sunny-score-info mt-2">
+                    <div class="${typeConfig.scoreClass.replace('-circle', '')}-info mt-2">
                         <div class="flex items-center">
-                            <i class="fas fa-sun text-yellow-500 mr-2"></i>
-                            <span class="font-semibold text-lg">${destination.sunny_score}/10</span>
-                            <span class="ml-2 text-sm text-gray-600">(${destination.sunny_level})</span>
+                            <i class="${typeConfig.icon} ${typeConfig.iconColor} mr-2"></i>
+                            <span class="font-semibold text-lg">${destination[typeConfig.scoreKey]}/10</span>
+                            <span class="ml-2 text-sm text-gray-600">(${destination[typeConfig.levelKey]})</span>
                         </div>
                     </div>
                 </div>
                 <div class="flex flex-col items-center justify-center">
-                    <div class="sunny-score-circle mb-2">
-                        <div class="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white font-bold text-lg">
-                            ${destination.sunny_score}
+                    <div class="${typeConfig.scoreClass} mb-2">
+                        <div class="w-16 h-16 rounded-full bg-gradient-to-br ${typeConfig.gradient} flex items-center justify-center text-white font-bold text-lg">
+                            ${destination[typeConfig.scoreKey]}
                         </div>
                     </div>
-                    <p class="text-sm text-gray-600">Sunny Score</p>
+                    <p class="text-sm text-gray-600">${typeConfig.label}</p>
                 </div>
             </div>
         `;
-        resultsDiv.appendChild(card);
+        contentContainer.appendChild(card);
 
-        // Create custom icon for the marker with sunny score
-        const sunnyIcon = L.divIcon({
-            className: 'sunny-marker-icon',
+        // Create custom icon for the marker
+        const markerIcon = L.divIcon({
+            className: typeConfig.markerClass,
             html: `
-                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white font-bold text-xs border-2 border-white shadow-lg">
-                    ${destination.sunny_score}
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br ${typeConfig.gradient} flex items-center justify-center text-white font-bold text-xs border-2 border-white shadow-lg">
+                    ${destination[typeConfig.scoreKey]}
                 </div>
             `,
             iconSize: [40, 40],
@@ -511,19 +679,19 @@ function displayResults(data) {
 
         // Create marker with custom icon
         const marker = L.marker([destination.coordinates.lat, destination.coordinates.lon], {
-            icon: sunnyIcon
+            icon: markerIcon
         })
         .addTo(AppState.map)
         .bindPopup(`
             <div class="text-center">
-                <div class="sunny-score-circle inline-block mb-2">
-                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white font-bold text-sm">
-                        ${destination.sunny_score}
+                <div class="${typeConfig.scoreClass} inline-block mb-2">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br ${typeConfig.gradient} flex items-center justify-center text-white font-bold text-sm">
+                        ${destination[typeConfig.scoreKey]}
                     </div>
                 </div>
-                <strong>${destination.index}. ${destination.city}</strong><br>
+                <strong>${destination.city}</strong><br>
                 ${destination.region}, ${destination.country}<br>
-                <span class="text-yellow-600 font-semibold">${destination.sunny_level}</span><br>
+                <span class="${typeConfig.textColor} font-semibold">${destination[typeConfig.levelKey]}</span><br>
                 ${destination.distance} miles away
             </div>
         `);
@@ -544,28 +712,99 @@ function displayResults(data) {
             marker.openPopup();
         });
     });
+    
+    // Add scroll to top button if there are many results
+    if (destinations.length > 15) {
+        const scrollToTopBtn = document.createElement('button');
+        scrollToTopBtn.className = 'fixed bottom-4 right-4 bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition-colors z-50';
+        scrollToTopBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+        scrollToTopBtn.title = 'Scroll to top';
+        scrollToTopBtn.onclick = () => {
+            const formContainer = document.querySelector('.form-container');
+            if (formContainer) {
+                formContainer.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
+        document.body.appendChild(scrollToTopBtn);
+        
+        // Store reference for cleanup
+        AppState.scrollToTopBtn = scrollToTopBtn;
+    }
+}
+
+// Ensure form container stays within viewport
+function ensureFormContainerInViewport() {
+    const formContainer = document.querySelector('.form-container');
+    if (!formContainer) return;
+    
+    const rect = formContainer.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Check if container goes outside viewport
+    if (rect.right > viewportWidth) {
+        const overflow = rect.right - viewportWidth;
+        formContainer.style.left = Math.max(20, 65 - overflow) + 'px';
+    }
+    
+    if (rect.bottom > viewportHeight) {
+        const overflow = rect.bottom - viewportHeight;
+        formContainer.style.top = Math.max(20, 50 - (overflow / viewportHeight * 100)) + '%';
+    }
 }
 
 // Initialize application
 function init() {
     initializeMap();
     setupDateSelector();
-    createDistanceControl();
     setupLocationAutocomplete();
     setupFormSubmission();
+    
+    // Ensure form container is properly positioned
+    setTimeout(ensureFormContainerInViewport, 100);
+    
+    // Recheck on window resize
+    window.addEventListener('resize', ensureFormContainerInViewport);
 }
 
 // Cleanup function
 function cleanup() {
-    if (AppState.cleanupDistanceControl) {
-        AppState.cleanupDistanceControl();
+    // Clean up distance circle manager
+    if (AppState.distanceCircleManager) {
+        AppState.distanceCircleManager.destroy();
+        AppState.distanceCircleManager = null;
     }
-    if (AppState.distanceControl) {
-        document.body.removeChild(AppState.distanceControl);
+    
+    // Clean up map markers
+    if (AppState.map) {
+        AppState.markers.forEach(marker => {
+            if (AppState.map.hasLayer(marker)) {
+                AppState.map.removeLayer(marker);
+            }
+        });
+        AppState.markers = [];
     }
-    if (AppState.distanceLabel) {
-        document.body.removeChild(AppState.distanceLabel);
+    
+    // Clean up scroll to top button
+    if (AppState.scrollToTopBtn) {
+        AppState.scrollToTopBtn.remove();
+        AppState.scrollToTopBtn = null;
     }
+    
+    // Clean up event listeners
+    const fromInput = document.getElementById('from');
+    if (fromInput) {
+        fromInput.removeEventListener('input', fromInput._debouncedSearch);
+    }
+    
+    // Clean up map
+    if (AppState.map) {
+        AppState.map.remove();
+        AppState.map = null;
+    }
+    
+    // Clean up window event listeners
+    window.removeEventListener('resize', ensureFormContainerInViewport);
 }
 
 // Initialize when DOM is loaded

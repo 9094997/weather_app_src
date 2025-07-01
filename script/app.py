@@ -13,6 +13,7 @@ score_system_dir = os.path.join(script_dir, 'score_system')
 sys.path.append(score_system_dir)
 
 from sunny_score import get_top_sunny_destinations, calculate_destination_sunny_score
+from comfort_index import get_top_comfortable_destinations, calculate_destination_comfort_score
 
 app = Flask(__name__)
 
@@ -97,7 +98,7 @@ def search():
         start_coords = (start_location_data.latitude, start_location_data.longitude)
         
         # Get top 10 sunny destinations using the sunny_score module
-        destinations = get_top_sunny_destinations(
+        sunny_destinations = get_top_sunny_destinations(
             weather_data=WEATHER_DATA,
             target_date=travel_date.date(),
             start_hour=start_hour,
@@ -106,7 +107,20 @@ def search():
             start_coords=start_coords
         )
         
-        return jsonify(destinations)
+        # Get top 10 comfortable destinations using the comfort_index module
+        comfortable_destinations = get_top_comfortable_destinations(
+            weather_data=WEATHER_DATA,
+            target_date=travel_date.date(),
+            start_hour=start_hour,
+            end_hour=end_hour,
+            max_distance=max_distance,
+            start_coords=start_coords
+        )
+        
+        return jsonify({
+            'sunny_destinations': sunny_destinations,
+            'comfortable_destinations': comfortable_destinations
+        })
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -179,12 +193,18 @@ def get_weather_stats(location_index, date):
                     location_data, target_date, start_hour, end_hour
                 )
                 
-                if sunny_data:
+                # Use comfort_index module to calculate stats
+                comfort_data = calculate_destination_comfort_score(
+                    location_data, target_date, start_hour, end_hour
+                )
+                
+                if sunny_data and comfort_data:
                     return jsonify({
                         'location': location_data['location'],
                         'date': forecast['date'],
                         'day_summary': forecast['day_summary'],
-                        'sunny_data': sunny_data
+                        'sunny_data': sunny_data,
+                        'comfort_data': comfort_data
                     })
                 else:
                     return jsonify({"error": "No weather data available for the specified time range"}), 404

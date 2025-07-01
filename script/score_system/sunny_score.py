@@ -158,7 +158,7 @@ def calculate_destination_sunny_score(location_data, target_date, start_hour=9, 
 
 def get_top_sunny_destinations(weather_data, target_date, start_hour=9, end_hour=17, max_distance=None, start_coords=None):
     """
-    Get top 10 destinations with highest sunny scores.
+    Get top 30 destinations with highest sunny scores.
     
     Args:
         weather_data: Weather data dictionary
@@ -169,7 +169,7 @@ def get_top_sunny_destinations(weather_data, target_date, start_hour=9, end_hour
         start_coords: Starting coordinates as (lat, lon) tuple (optional)
     
     Returns:
-        List of top 10 destinations sorted by sunny score
+        List of top 30 destinations sorted by sunny score
     """
     from geopy.distance import geodesic
     
@@ -212,9 +212,9 @@ def get_top_sunny_destinations(weather_data, target_date, start_hour=9, end_hour
                 'hourly_data': sunny_data['hourly_data']
             })
     
-    # Sort by sunny score (highest first) and return top 10
+    # Sort by sunny score (highest first) and return top 30
     destinations.sort(key=lambda x: x['sunny_score'], reverse=True)
-    return destinations[:10]
+    return destinations[:30]
 
 # # Example batch
 # data = [

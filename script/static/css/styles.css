@@ -11,7 +11,7 @@
 /* Form container styles */
 .form-container {
     position: fixed;
-    top: 40%;
+    top: 50%;
     left: 65px;
     transform: translateY(-50%);
     width: 456px;
@@ -22,6 +22,7 @@
     z-index: 1000;
     max-height: calc(100vh - 40px);
     overflow-y: auto;
+    max-width: calc(100vw - 130px);
 }
 
 /* Location autocomplete styles */
@@ -74,7 +75,7 @@
     border-radius: 4px;
 }
 
-/* Sunny score styles */
+/* Score styles */
 .sunny-score-circle {
     background: linear-gradient(135deg, #fbbf24, #f59e0b);
     border-radius: 50%;
@@ -87,7 +88,20 @@
     min-height: 48px;
 }
 
-.sunny-score-info {
+.comfort-score-circle {
+    background: linear-gradient(135deg, #4ade80, #3b82f6);
+    border-radius: 50%;
+    padding: 8px;
+    box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    min-height: 48px;
+}
+
+.sunny-score-info,
+.comfort-score-info {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -98,6 +112,13 @@
     border-radius: 50%;
     border: 2.5px solid #f59e0b;
     box-shadow: 0 2px 8px rgba(251, 191, 36, 0.4);
+}
+
+.comfort-marker-icon {
+    background: radial-gradient(circle, #4ade80 70%, #3b82f6 100%);
+    border-radius: 50%;
+    border: 2.5px solid #3b82f6;
+    box-shadow: 0 2px 8px rgba(74, 222, 128, 0.4);
 }
 
 .result-card-content {
@@ -124,47 +145,69 @@
 .distance-control {
     position: absolute;
     background: white;
-    border: 2px solid #3B82F6;
+    border: 3px solid #3B82F6;
     border-radius: 50%;
-    width: 20px;
-    height: 20px;
+    width: 30px;
+    height: 30px;
     cursor: grab;
     z-index: 1000;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: bold;
     color: #3B82F6;
     pointer-events: auto;
     user-select: none;
+    top: 0;
+    left: 0;
+    transition: all 0.2s ease;
+}
+
+.distance-control:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
 }
 
 .distance-control:active {
     cursor: grabbing;
+    transform: scale(0.95);
 }
 
 .distance-control-handle {
-    width: 8px;
-    height: 8px;
+    width: 28px;
+    height: 28px;
     background: #3B82F6;
+    border: 3px solid #fff;
     border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(59,130,246,0.3);
+    cursor: grab;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.distance-handle-marker .distance-control-handle:hover {
+    box-shadow: 0 4px 16px rgba(59,130,246,0.5);
+    transform: scale(1.1);
 }
 
 .distance-label {
     position: absolute;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 14px;
     font-weight: bold;
     color: #3B82F6;
     white-space: nowrap;
     z-index: 1001;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     pointer-events: none;
     user-select: none;
+    top: 0;
+    left: 0;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    backdrop-filter: blur(4px);
 }
 
 .distance-label-content {
@@ -180,6 +223,25 @@
 .distance-unit {
     font-size: 10px;
     opacity: 0.8;
+}
+
+.leaflet-tooltip.distance-label-tooltip {
+    background: rgba(255,255,255,0.95);
+    color: #2563eb;
+    border-radius: 6px;
+    border: 1.5px solid #2563eb;
+    font-size: 1rem;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(59,130,246,0.15);
+    padding: 6px 12px;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* Time range container */
+.time-range-container {
+    width: 100%;
+    margin: 20px 0;
 }
 
 /* Date selector styles */
@@ -268,14 +330,65 @@
 /* Responsive design */
 @media (max-width: 768px) {
     .form-container {
-        left: 20px;
-        right: 20px;
-        width: auto;
-        max-width: none;
+        position: relative;
+        top: 0;
+        left: 0;
+        right: 0;
+        transform: none;
+        width: 100%;
+        max-width: 100%;
+        border-radius: 0;
+        margin: 0;
+        padding: 1rem;
+        max-height: 100vh;
+        overflow-y: auto;
     }
     
     .date-option {
         min-width: 50px;
         padding: 6px 8px;
+    }
+    
+    .result-card-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .tab-buttons {
+        flex-direction: column;
+    }
+    
+    .tab-buttons button {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .form-container {
+        padding: 0.75rem;
+    }
+    
+    .date-selector {
+        gap: 4px;
+    }
+    
+    .date-option {
+        padding: 0.375rem;
+        font-size: 0.75rem;
+        min-width: 40px;
+    }
+    
+    .sunny-score-circle,
+    .comfort-score-circle {
+        min-width: 40px;
+        min-height: 40px;
+    }
+    
+    .sunny-score-circle .w-16,
+    .comfort-score-circle .w-16 {
+        width: 3rem;
+        height: 3rem;
     }
 } 
