@@ -2,17 +2,17 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 from datetime import datetime
 import json
 import os
+import sys
 from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut
-import sys
 
 # Add the score_system directory to the path
 script_dir = os.path.dirname(os.path.abspath(__file__))
 score_system_dir = os.path.join(script_dir, 'score_system')
 sys.path.append(score_system_dir)
 
-from sunny_score import get_top_sunny_destinations
+from sunny_score import get_top_sunny_destinations, calculate_destination_sunny_score
 
 app = Flask(__name__)
 
@@ -175,7 +175,6 @@ def get_weather_stats(location_index, date):
             forecast_date = datetime.strptime(forecast['date'], '%Y-%m-%d').date()
             if forecast_date == target_date:
                 # Use sunny_score module to calculate stats
-                from sunny_score import calculate_destination_sunny_score
                 sunny_data = calculate_destination_sunny_score(
                     location_data, target_date, start_hour, end_hour
                 )
