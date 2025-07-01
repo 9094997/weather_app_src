@@ -191,6 +191,11 @@ def get_top_sunny_destinations(weather_data, target_date, start_hour=9, end_hour
         sunny_data = calculate_destination_sunny_score(location_data, target_date, start_hour, end_hour)
         
         if sunny_data:
+            # Calculate temperature range from hourly data
+            feels_like_temps = [h['feelslike_c'] for h in sunny_data['hourly_data']]
+            min_temp = min(feels_like_temps)
+            max_temp = max(feels_like_temps)
+            
             destinations.append({
                 'index': index,
                 'city': location['name'],
@@ -209,7 +214,9 @@ def get_top_sunny_destinations(weather_data, target_date, start_hour=9, end_hour
                 'rain_score': sunny_data['rain_score'],
                 'snow_score': sunny_data['snow_score'],
                 'time_range': sunny_data['time_range'],
-                'hourly_data': sunny_data['hourly_data']
+                'hourly_data': sunny_data['hourly_data'],
+                'min_temp': round(min_temp, 1),
+                'max_temp': round(max_temp, 1)
             })
     
     # Sort by sunny score (highest first) and return top 30

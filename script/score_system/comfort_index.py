@@ -282,6 +282,11 @@ def get_top_comfortable_destinations(weather_data, target_date, start_hour=9, en
         comfort_data = calculate_destination_comfort_score(location_data, target_date, start_hour, end_hour)
         
         if comfort_data:
+            # Calculate temperature range from hourly data
+            feels_like_temps = [h['feelslike_c'] for h in comfort_data['hourly_data']]
+            min_temp = min(feels_like_temps)
+            max_temp = max(feels_like_temps)
+            
             destinations.append({
                 'index': index,
                 'city': location['name'],
@@ -302,7 +307,9 @@ def get_top_comfortable_destinations(weather_data, target_date, start_hour=9, en
                 'feels_like_temp_score': comfort_data['feels_like_temp_score'],
                 'humidity_score': comfort_data['humidity_score'],
                 'time_range': comfort_data['time_range'],
-                'hourly_data': comfort_data['hourly_data']
+                'hourly_data': comfort_data['hourly_data'],
+                'min_temp': round(min_temp, 1),
+                'max_temp': round(max_temp, 1)
             })
     
     # Sort by comfort score (highest first) and return top 30

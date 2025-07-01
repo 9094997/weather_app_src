@@ -519,12 +519,12 @@ function displayResults(data) {
     const sunnyTab = document.createElement('button');
     sunnyTab.className = 'px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600 bg-white';
     sunnyTab.textContent = `Sunny Destinations (${data.sunny_destinations.length})`;
-    sunnyTab.onclick = () => switchTab('sunny', data);
+    sunnyTab.onclick = () => switchTab('sunny', AppState.currentData);
     
     const comfortTab = document.createElement('button');
     comfortTab.className = 'px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300';
     comfortTab.textContent = `Comfortable Destinations (${data.comfortable_destinations.length})`;
-    comfortTab.onclick = () => switchTab('comfort', data);
+    comfortTab.onclick = () => switchTab('comfort', AppState.currentData);
     
     tabButtons.appendChild(sunnyTab);
     tabButtons.appendChild(comfortTab);
@@ -537,12 +537,13 @@ function displayResults(data) {
     
     resultsDiv.appendChild(tabsContainer);
     
-    // Show sunny destinations by default
-    displaySunnyDestinations(data.sunny_destinations);
-    
-    // Store tab state
+    // Store tab state and data
     AppState.currentTab = 'sunny';
     AppState.tabButtons = { sunny: sunnyTab, comfort: comfortTab };
+    AppState.currentData = data;
+    
+    // Show sunny destinations by default
+    displaySunnyDestinations(data.sunny_destinations);
 
     if (AppState.distanceCircleManager && AppState.distanceCircleManager.center) {
         AppState.distanceCircleManager.show();
@@ -564,6 +565,9 @@ function switchTab(tabName, data) {
         }
     });
     AppState.markers = [];
+    
+    // Update stored data
+    AppState.currentData = data;
     
     // Display appropriate destinations
     if (tabName === 'sunny') {
@@ -593,20 +597,115 @@ function displayDestinations(destinations, type) {
     
     contentContainer.innerHTML = '';
     
-    // Add results counter
-    const resultsCounter = document.createElement('div');
-    resultsCounter.className = 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200';
-    resultsCounter.innerHTML = `
-        <div class="flex items-center justify-between">
-            <span class="text-sm font-medium text-blue-800">
-                Showing ${destinations.length} destinations
-            </span>
-            <span class="text-xs text-blue-600">
-                Click any destination to center the map
-            </span>
-        </div>
+    // --- Sort Dropdown UI ---
+    const sortContainer = document.createElement('div');
+    sortContainer.className = 'mb-4 flex items-center justify-end relative w-full';
+    
+    // Sort icon button
+    const sortBtn = document.createElement('button');
+    sortBtn.className = 'w-full flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm';
+    sortBtn.innerHTML = `<i class="fas fa-sort mr-2 text-gray-600"></i><span id="current-sort-label" class="text-gray-700 font-medium">Sort by: Score</span><i class="fas fa-chevron-down ml-2 text-gray-500 text-xs"></i>`;
+    sortContainer.appendChild(sortBtn);
+    
+    // Dropdown menu
+    const dropdown = document.createElement('div');
+    dropdown.className = 'hidden sort-dropdown';
+    dropdown.innerHTML = `
+        <button data-sort="score">Score</button>
+        <button data-sort="distance">Distance</button>
+        <button data-sort="temperature">Temperature</button>
     `;
-    contentContainer.appendChild(resultsCounter);
+    sortContainer.appendChild(dropdown);
+    contentContainer.appendChild(sortContainer);
+    
+    // Dropdown logic
+    let currentSort = 'score';
+    const sortLabel = sortBtn.querySelector('#current-sort-label');
+    const chevronIcon = sortBtn.querySelector('.fa-chevron-down');
+    
+    sortBtn.onclick = (e) => {
+        e.stopPropagation();
+        const isHidden = dropdown.classList.contains('hidden');
+        dropdown.classList.toggle('hidden');
+        
+        // Update button appearance
+        if (isHidden) {
+            sortBtn.classList.add('ring-2', 'ring-blue-500', 'border-blue-500');
+            chevronIcon.classList.remove('fa-chevron-down');
+            chevronIcon.classList.add('fa-chevron-up');
+        } else {
+            sortBtn.classList.remove('ring-2', 'ring-blue-500', 'border-blue-500');
+            chevronIcon.classList.remove('fa-chevron-up');
+            chevronIcon.classList.add('fa-chevron-down');
+        }
+    };
+    // Dropdown option click
+    dropdown.querySelectorAll('button[data-sort]').forEach(btn => {
+        btn.onclick = (e) => {
+            const sortType = btn.getAttribute('data-sort');
+            currentSort = sortType;
+            sortLabel.textContent = 'Sort by: ' + (sortType === 'score' ? 'Score' : sortType.charAt(0).toUpperCase() + sortType.slice(1));
+            dropdown.classList.add('hidden');
+            
+            // Reset button appearance
+            sortBtn.classList.remove('ring-2', 'ring-blue-500', 'border-blue-500');
+            chevronIcon.classList.remove('fa-chevron-up');
+            chevronIcon.classList.add('fa-chevron-down');
+            
+            sortDestinations(sortType);
+        };
+    });
+    // Close dropdown on outside click
+    document.addEventListener('click', function closeDropdown(e) {
+        if (!sortContainer.contains(e.target)) {
+            dropdown.classList.add('hidden');
+            // Reset button appearance
+            sortBtn.classList.remove('ring-2', 'ring-blue-500', 'border-blue-500');
+            chevronIcon.classList.remove('fa-chevron-up');
+            chevronIcon.classList.add('fa-chevron-down');
+        }
+    });
+    
+    // Store current destinations for sorting
+    AppState.currentDestinations = [...destinations];
+    AppState.currentType = type;
+    AppState.currentSort = currentSort;
+    
+    // Initial sort
+    sortDestinations(currentSort);
+}
+
+// Sort destinations based on criteria (descending only)
+function sortDestinations(criteria) {
+    if (!AppState.currentDestinations || !AppState.currentType) return;
+    let sortedDestinations = [...AppState.currentDestinations];
+    switch (criteria) {
+        case 'score': {
+            const scoreKey = AppState.currentType === 'sunny' ? 'sunny_score' : 'comfort_score';
+            sortedDestinations.sort((a, b) => b[scoreKey] - a[scoreKey]);
+            break;
+        }
+        case 'distance':
+            sortedDestinations.sort((a, b) => a.distance - b.distance);
+            break;
+        case 'temperature':
+            sortedDestinations.sort((a, b) => b.max_temp - a.max_temp);
+            break;
+    }
+    renderDestinations(sortedDestinations, AppState.currentType);
+}
+
+// Render destinations without recreating sort controls
+function renderDestinations(destinations, type) {
+    const contentContainer = document.getElementById('tab-content');
+    if (!contentContainer) return;
+    
+    // Remove existing result cards and counter, keep sort controls
+    const sortContainer = contentContainer.querySelector('.mb-4.flex.items-center.justify-end.relative');
+    
+    // Clear everything except sort controls
+    contentContainer.innerHTML = '';
+    if (sortContainer) contentContainer.appendChild(sortContainer);
     
     const config = {
         sunny: {
@@ -635,16 +734,36 @@ function displayDestinations(destinations, type) {
     
     const typeConfig = config[type];
     
+    // Clear existing markers
+    AppState.markers.forEach(marker => {
+        if (AppState.map.hasLayer(marker)) {
+            AppState.map.removeLayer(marker);
+        }
+    });
+    AppState.markers = [];
+    
     destinations.forEach((destination, idx) => {
         // Create result card
         const card = document.createElement('div');
         card.className = 'bg-white rounded-lg shadow-md p-3 hover:shadow-lg transition-shadow mb-2 cursor-pointer';
+        
+        // Format temperature display
+        let tempDisplay = '';
+        if (destination.min_temp !== undefined && destination.max_temp !== undefined) {
+            if (destination.min_temp === destination.max_temp) {
+                tempDisplay = `${destination.min_temp}°C`;
+            } else {
+                tempDisplay = `${destination.min_temp}°C - ${destination.max_temp}°C`;
+            }
+        }
+        
         card.innerHTML = `
             <div class="result-card-content">
                 <div class="result-card-info">
                     <h3 class="font-bold text-lg">${destination.city}</h3>
                     <p class="text-gray-600">${destination.region}, ${destination.country}</p>
                     <p class="text-gray-500">${Math.round(destination.distance)} miles away</p>
+                    ${tempDisplay ? `<p class="text-gray-500 text-sm">🌡️ ${tempDisplay}</p>` : ''}
                     <div class="${typeConfig.scoreClass.replace('-circle', '')}-info mt-2">
                         <div class="flex items-center">
                             <i class="${typeConfig.icon} ${typeConfig.iconColor} mr-2"></i>
@@ -691,6 +810,7 @@ function displayDestinations(destinations, type) {
                 </div>
                 <strong>${destination.city}</strong><br>
                 ${destination.region}, ${destination.country}<br>
+                ${tempDisplay ? `🌡️ ${tempDisplay}<br>` : ''}
                 <span class="${typeConfig.textColor} font-semibold">${destination[typeConfig.levelKey]}</span><br>
                 ${destination.distance} miles away
             </div>
