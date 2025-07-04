@@ -1107,8 +1107,27 @@ class WeatherProjectionManager {
             // Clear existing projection
             this.clearProjection();
             
-            // Fetch cells within radius
-            const response = await fetch(`/cells-in-radius?lat=${centerLat}&lon=${centerLon}&radius=${radiusMiles}`);
+            // Get current search parameters from the form or use defaults
+            const dateInput = document.getElementById('date');
+            const startHourInput = document.getElementById('start_hour');
+            const endHourInput = document.getElementById('end_hour');
+            
+            const targetDate = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+            const startHour = startHourInput ? parseInt(startHourInput.value) : 9;
+            const endHour = endHourInput ? parseInt(endHourInput.value) : 17;
+            
+            // Fetch real weather data for cells within radius
+            const params = new URLSearchParams({
+                lat: centerLat,
+                lon: centerLon,
+                radius: radiusMiles,
+                index_type: indexType,
+                date: targetDate,
+                start_hour: startHour,
+                end_hour: endHour
+            });
+            
+            const response = await fetch(`/project-weather-index?${params}`);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -1120,18 +1139,29 @@ class WeatherProjectionManager {
                 throw new Error(data.error);
             }
             
-            // Generate dummy data and create colored cells
+            // Create colored cells using real weather scores
+            let successfulCells = 0;
             data.cells.forEach(cell => {
-                const projectionValue = this.generateDummyIndexValue(cell, indexType);
-                this.createProjectedCell(cell, indexType, projectionValue);
+                if (cell.weather_score && cell.weather_score.score > 0) {
+                    this.createProjectedCell(cell, indexType, cell.weather_score.score, cell.weather_score);
+                    successfulCells++;
+                }
             });
+            
+            if (successfulCells === 0) {
+                throw new Error('No weather data available for any grid cells in the selected area');
+            }
             
             this.currentProjection = indexType;
             this.showLegend(indexType);
             this.showClearButton();
             this.setActiveButton(indexType);
             
-            console.log(`Projected ${indexType} index for ${data.cells.length} grid cells`);
+            console.log(`Projected ${indexType} index for ${data.cells.length} grid cells using real weather data`);
+            console.log(`Date: ${data.target_date}, Time: ${data.time_range}`);
+            
+            // Update browse results with projection info
+            this.updateBrowseResults(data);
             
         } catch (error) {
             console.error('Error projecting index:', error);
@@ -1142,31 +1172,7 @@ class WeatherProjectionManager {
         }
     }
 
-    generateDummyIndexValue(cell, indexType) {
-        // Generate dummy data based on cell position and type
-        const lat = cell.center.latitude;
-        const lon = cell.center.longitude;
-        
-        if (indexType === 'sunny') {
-            // Simulate sunny index: higher in south, lower in north and coastal areas
-            const latitudeFactor = Math.max(0, (lat - 50) / 10); // Higher towards south
-            const coastalFactor = Math.random() * 0.3; // Random coastal effect
-            const seasonalFactor = Math.random() * 0.4 + 0.6; // Seasonal variation
-            
-            let sunnyScore = (latitudeFactor * 4 + coastalFactor + seasonalFactor * 5);
-            return Math.max(1, Math.min(10, Math.round(sunnyScore)));
-        } else {
-            // Simulate comfort index: moderate temperatures, low humidity
-            const temperatureFactor = Math.random() * 0.5 + 0.3; // Random temp comfort
-            const humidityFactor = Math.random() * 0.4 + 0.4; // Random humidity
-            const windFactor = Math.random() * 0.3 + 0.2; // Random wind comfort
-            
-            let comfortScore = (temperatureFactor + humidityFactor + windFactor) * 3.5;
-            return Math.max(1, Math.min(10, Math.round(comfortScore)));
-        }
-    }
-
-    createProjectedCell(cell, indexType, value) {
+    createProjectedCell(cell, indexType, value, weatherScore = null) {
         const boundaries = cell.boundaries;
         if (!boundaries || boundaries.length < 4) return;
         
@@ -1188,43 +1194,63 @@ class WeatherProjectionManager {
         
         // Add popup with projection info
         const indexName = indexType === 'sunny' ? 'Sunny' : 'Comfort';
-        const level = this.getIndexLevel(value);
+        const level = weatherScore ? weatherScore.level : this.getIndexLevel(value);
+        const closestLocation = weatherScore ? weatherScore.closest_location : 'Unknown';
         
-        polygon.bindPopup(`
+        // Use actual location name from weather data instead of Grid Cell #
+        const locationName = weatherScore && weatherScore.closest_location && weatherScore.closest_location !== 'Unknown'
+            ? weatherScore.closest_location 
+            : `Grid Cell #${cell.id}`;
+        
+        let popupContent = `
             <div class="text-center">
-                <strong>Grid Cell #${cell.id}</strong><br>
+                <strong>${locationName}</strong><br>
                 <div class="mt-2 p-2 rounded" style="background: ${fillColor}; color: white; font-weight: bold;">
                     ${indexName} Index: ${value}/10
                 </div>
                 <small class="text-gray-600 mt-1 block">Level: ${level}</small><br>
-                <small>Center: ${cell.center.latitude.toFixed(4)}, ${cell.center.longitude.toFixed(4)}</small>
-            </div>
-        `);
+                <small>Center: ${cell.center.latitude.toFixed(4)}, ${cell.center.longitude.toFixed(4)}</small>`;
+        
+        if (weatherScore && weatherScore.closest_location !== 'Unknown') {
+            const distance = weatherScore.distance_to_station;
+            const distanceText = distance ? ` (${distance} miles away)` : '';
+            popupContent += `<br><small class="text-blue-600">Data from: ${closestLocation}${distanceText}</small>`;
+        }
+        
+        popupContent += `</div>`;
+        
+        polygon.bindPopup(popupContent);
         
         // Add to map and store reference
         polygon.addTo(this.map);
-        this.gridCells.push({ polygon, value, type: indexType });
+        this.gridCells.push({ polygon, value, type: indexType, weatherScore });
     }
 
     getProjectionColors(indexType, value) {
         if (indexType === 'sunny') {
-            // Sunny index colors: red (low) to yellow (high)
+            // Sunny index colors: More distinct color progression ending in light brown orange
             if (value <= 3) {
                 return {
-                    color: '#dc2626',
-                    fillColor: '#ef4444',
+                    color: '#991b1b',      // Very dark red border
+                    fillColor: '#dc2626',  // Dark red fill
                     className: 'grid-cell-low'
                 };
-            } else if (value <= 6) {
+            } else if (value <= 5) {
                 return {
-                    color: '#ea580c',
-                    fillColor: '#f97316',
+                    color: '#c2410c',      // Dark orange border
+                    fillColor: '#ea580c',  // Orange fill
+                    className: 'grid-cell-medium'
+                };
+            } else if (value <= 7) {
+                return {
+                    color: '#a16207',      // Dark amber border
+                    fillColor: '#d97706',  // Amber fill
                     className: 'grid-cell-medium'
                 };
             } else {
                 return {
-                    color: '#d97706',
-                    fillColor: '#f59e0b',
+                    color: '#92400e',      // Light brown border
+                    fillColor: '#d97706',  // Light brown orange fill
                     className: 'grid-cell-high'
                 };
             }
@@ -1232,20 +1258,26 @@ class WeatherProjectionManager {
             // Comfort index colors: blue (low) to green (high)
             if (value <= 3) {
                 return {
-                    color: '#2563eb',
-                    fillColor: '#3b82f6',
+                    color: '#dc2626',      // Red border for very uncomfortable
+                    fillColor: '#ef4444',  // Red fill
                     className: 'grid-cell-low'
                 };
-            } else if (value <= 6) {
+            } else if (value <= 5) {
                 return {
-                    color: '#0891b2',
-                    fillColor: '#06b6d4',
+                    color: '#2563eb',      // Blue border for uncomfortable
+                    fillColor: '#3b82f6',  // Blue fill
+                    className: 'grid-cell-medium'
+                };
+            } else if (value <= 7) {
+                return {
+                    color: '#0891b2',      // Cyan border for moderate
+                    fillColor: '#06b6d4',  // Cyan fill
                     className: 'grid-cell-medium'
                 };
             } else {
                 return {
-                    color: '#059669',
-                    fillColor: '#10b981',
+                    color: '#059669',      // Green border for comfortable
+                    fillColor: '#10b981',  // Green fill
                     className: 'grid-cell-high'
                 };
             }
@@ -1253,9 +1285,10 @@ class WeatherProjectionManager {
     }
 
     getIndexLevel(value) {
-        if (value <= 3) return 'Low';
-        if (value <= 6) return 'Medium';
-        return 'High';
+        if (value <= 3) return 'Poor';
+        if (value <= 5) return 'Fair'; 
+        if (value <= 7) return 'Good';
+        return 'Excellent';
     }
 
     showLegend(indexType) {
@@ -1266,11 +1299,22 @@ class WeatherProjectionManager {
         
         legendContent.innerHTML = '';
         
-        const levels = [
-            { range: '1-3', level: 'Low', value: 2 },
-            { range: '4-6', level: 'Medium', value: 5 },
-            { range: '7-10', level: 'High', value: 8 }
-        ];
+        let levels;
+        if (indexType === 'sunny') {
+            levels = [
+                { range: '1-3', level: 'Poor', value: 2 },
+                { range: '4-5', level: 'Fair', value: 4.5 },
+                { range: '6-7', level: 'Good', value: 6.5 },
+                { range: '8-10', level: 'Excellent', value: 9 }
+            ];
+        } else {
+            levels = [
+                { range: '1-3', level: 'Very Uncomfortable', value: 2 },
+                { range: '4-5', level: 'Uncomfortable', value: 4.5 },
+                { range: '6-7', level: 'Moderate', value: 6.5 },
+                { range: '8-10', level: 'Comfortable', value: 9 }
+            ];
+        }
         
         levels.forEach(item => {
             const { fillColor } = this.getProjectionColors(indexType, item.value);
@@ -1363,6 +1407,78 @@ class WeatherProjectionManager {
             if (buttonText) buttonText.style.opacity = '1';
             if (buttonSpinner) buttonSpinner.style.display = 'none';
         }
+    }
+
+    updateBrowseResults(projectionData) {
+        const browseResults = document.getElementById('browseResults');
+        if (!browseResults) return;
+        
+        // Create summary information about the projection
+        const totalCells = projectionData.total_cells;
+        const indexType = projectionData.index_type;
+        const targetDate = projectionData.target_date;
+        const timeRange = projectionData.time_range;
+        
+        // Calculate statistics
+        const scores = projectionData.cells
+            .filter(cell => cell.weather_score && cell.weather_score.score > 0)
+            .map(cell => cell.weather_score.score);
+        
+        if (scores.length === 0) {
+            browseResults.innerHTML = `
+                <div class="text-center p-4 bg-red-50 rounded-lg border border-red-200">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-xl mb-2"></i>
+                    <h3 class="font-semibold text-red-800 mb-2">No Weather Data Available</h3>
+                    <p class="text-red-700 text-sm">
+                        No weather data found for the projected area on ${targetDate}.
+                    </p>
+                </div>
+            `;
+            return;
+        }
+        
+        const avgScore = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+        const maxScore = Math.max(...scores).toFixed(1);
+        const minScore = Math.min(...scores).toFixed(1);
+        
+        const indexName = indexType === 'sunny' ? 'Sunny' : 'Comfort';
+        const iconClass = indexType === 'sunny' ? 'fas fa-sun text-yellow-500' : 'fas fa-thermometer-half text-green-500';
+        
+        browseResults.innerHTML = `
+            <div class="bg-blue-50 rounded-lg border border-blue-200 p-4">
+                <div class="flex items-center mb-3">
+                    <i class="${iconClass} text-xl mr-2"></i>
+                    <h3 class="font-semibold text-blue-800">${indexName} Index Projection Results</h3>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <div class="text-blue-600 font-medium">Date & Time</div>
+                        <div class="text-blue-800">${targetDate}</div>
+                        <div class="text-blue-700">${timeRange}</div>
+                    </div>
+                    <div>
+                        <div class="text-blue-600 font-medium">Coverage</div>
+                        <div class="text-blue-800">${totalCells} grid cells</div>
+                        <div class="text-blue-700">${scores.length} with data</div>
+                    </div>
+                    <div>
+                        <div class="text-blue-600 font-medium">Score Range</div>
+                        <div class="text-blue-800">${minScore} - ${maxScore}</div>
+                        <div class="text-blue-700">Average: ${avgScore}</div>
+                    </div>
+                    <div>
+                        <div class="text-blue-600 font-medium">Best Areas</div>
+                        <div class="text-blue-800">${scores.filter(s => s >= 7).length} high scoring</div>
+                        <div class="text-blue-700">${scores.filter(s => s >= 5).length} moderate+</div>
+                    </div>
+                </div>
+                
+                <div class="mt-3 text-xs text-blue-600">
+                    💡 Click on any colored cell on the map for detailed weather information
+                </div>
+            </div>
+        `;
     }
 
     destroy() {
