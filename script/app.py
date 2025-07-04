@@ -6,6 +6,7 @@ import sys
 from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut
+import math
 
 # Add the score_system directory to the path
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,8 +36,48 @@ def load_weather_data():
         print("Error: Invalid JSON in weather_data.json")
         return {"weather_data": []}
 
-# Load the weather data
+def load_grid_boundaries():
+    """Load grid boundaries data from grid_boundaries.json"""
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        boundaries_file = os.path.join(script_dir, 'map', 'grid_boundaries.json')
+        with open(boundaries_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"Error: grid_boundaries.json not found")
+        return {"cell_boundaries": []}
+    except json.JSONDecodeError:
+        print("Error: Invalid JSON in grid_boundaries.json")
+        return {"cell_boundaries": []}
+
+def calculate_distance_miles(lat1, lon1, lat2, lon2):
+    """Calculate distance between two points in miles"""
+    try:
+        point1 = (lat1, lon1)
+        point2 = (lat2, lon2)
+        return geodesic(point1, point2).miles
+    except:
+        return float('inf')
+
+def get_cells_within_radius(center_lat, center_lon, radius_miles, grid_data):
+    """Get all grid cells within the specified radius"""
+    cells_in_radius = []
+    
+    for cell in grid_data.get('cell_boundaries', []):
+        center = cell.get('center', {})
+        cell_lat = center.get('latitude')
+        cell_lon = center.get('longitude')
+        
+        if cell_lat is not None and cell_lon is not None:
+            distance = calculate_distance_miles(center_lat, center_lon, cell_lat, cell_lon)
+            if distance <= radius_miles:
+                cells_in_radius.append(cell)
+    
+    return cells_in_radius
+
+# Load the weather data and grid boundaries
 WEATHER_DATA = load_weather_data()
+GRID_BOUNDARIES = load_grid_boundaries()
 
 @app.route('/')
 def home():
@@ -222,6 +263,38 @@ def serve_weather_icon(filename):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     icons_dir = os.path.join(script_dir, '..', 'icons_and_codes', 'weather_icons')
     return send_from_directory(icons_dir, filename)
+
+@app.route('/grid-boundaries')
+def get_grid_boundaries():
+    """Return the grid boundaries data"""
+    return jsonify(GRID_BOUNDARIES)
+
+@app.route('/cells-in-radius')
+def get_cells_in_radius():
+    """Get grid cells within a specified radius from a center point"""
+    try:
+        # Get query parameters
+        center_lat = float(request.args.get('lat'))
+        center_lon = float(request.args.get('lon'))
+        radius_miles = float(request.args.get('radius', 200))
+        
+        # Get cells within radius
+        cells_in_radius = get_cells_within_radius(center_lat, center_lon, radius_miles, GRID_BOUNDARIES)
+        
+        return jsonify({
+            'center': {
+                'latitude': center_lat,
+                'longitude': center_lon
+            },
+            'radius_miles': radius_miles,
+            'total_cells': len(cells_in_radius),
+            'cells': cells_in_radius
+        })
+        
+    except (ValueError, TypeError) as e:
+        return jsonify({"error": "Invalid parameters. Please provide lat, lon, and radius"}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

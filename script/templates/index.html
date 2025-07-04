@@ -100,7 +100,69 @@
             </button>
         </form>
         
-        <div id="results" class="mt-8 space-y-4"></div>
+        <!-- Mode tabs container -->
+        <div id="modeTabsContainer" class="mt-6" style="display: none;">
+            <div class="flex border-b border-gray-200 mb-4">
+                <button id="guidedModeTab" class="mode-tab px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600 bg-white">
+                    Guided Mode
+                </button>
+                <button id="browseModeTab" class="mode-tab px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300">
+                    Browse Mode
+                </button>
+            </div>
+            
+            <!-- Guided Mode Content -->
+            <div id="guidedModeContent" class="mode-content" style="display: block;">
+                <div id="results" class="space-y-4"></div>
+            </div>
+            
+            <!-- Browse Mode Content -->
+            <div id="browseModeContent" class="mode-content" style="display: none;">
+                <div class="text-center mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Project Weather Indices</h3>
+                    <p class="text-gray-600 text-sm mb-4">Visualize predicted weather patterns across the 8x8 mile grid system</p>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" id="projectSunnyButton"
+                            class="projection-button bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-2 px-4 rounded-lg hover:from-yellow-500 hover:to-orange-600 transition-all">
+                            <span id="projectSunnyButtonText">
+                                <i class="fas fa-sun mr-2"></i>Project Sunny Index
+                            </span>
+                            <span id="projectSunnyButtonSpinner" class="loading-spinner ml-2" style="display: none;"></span>
+                        </button>
+                        
+                        <button type="button" id="projectComfortButton"
+                            class="projection-button bg-gradient-to-r from-green-400 to-blue-500 text-white py-2 px-4 rounded-lg hover:from-green-500 hover:to-blue-600 transition-all">
+                            <span id="projectComfortButtonText">
+                                <i class="fas fa-thermometer-half mr-2"></i>Project Comfort Index
+                            </span>
+                            <span id="projectComfortButtonSpinner" class="loading-spinner ml-2" style="display: none;"></span>
+                        </button>
+                    </div>
+                    
+                    <!-- Index Legend -->
+                    <div id="indexLegend" class="mt-4 p-3 bg-gray-50 rounded-lg" style="display: none;">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-2">Index Scale</h4>
+                        <div id="legendContent" class="flex justify-center items-center space-x-4">
+                            <!-- Legend content will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <button type="button" id="clearProjectionButton" 
+                        class="mt-3 w-full bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors" 
+                        style="display: none;">
+                        <i class="fas fa-times mr-2"></i>Clear Projection
+                    </button>
+                </div>
+                
+                <div id="browseResults" class="space-y-4">
+                    <!-- Grid cell information and controls will be displayed here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Initial results area (before mode tabs are shown) -->
+        <div id="initialResults" class="mt-8 space-y-4"></div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
