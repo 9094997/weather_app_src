@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Data Verification Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        
+        .control-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .control-group input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+        
+        .stats {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .stats div {
+            margin-bottom: 5px;
+        }
+        
+        .legend {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            border-radius: 3px;
+        }
+        
+        .sample-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .sample-controls button {
+            padding: 5px 10px;
+            border: 1px solid #ccc;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .sample-controls button:hover {
+            background: #f0f0f0;
+        }
+        
+        .sample-controls button.active {
+            background: #007cba;
+            color: white;
+        }
+        
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 2000;
+        }
+        
+        .cell-label {
+            background: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid #333 !important;
+            border-radius: 3px !important;
+            font-size: 10px !important;
+            font-weight: bold !important;
+            text-align: center !important;
+            line-height: 18px !important;
+            pointer-events: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div>Loading grid data... Please wait.</div>
+    </div>
+    
+    <div id="map"></div>
+    
+    <div class="control-panel">
+        <h3 style="margin-top: 0;">Grid Verification Controls</h3>
+        
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="showCenters" checked> 
+                Show Grid Centers
+            </label>
+            <label>
+                <input type="checkbox" id="showBoundaries" checked> 
+                Show Grid Boundaries
+            </label>
+            <label>
+                <input type="checkbox" id="showLabels"> 
+                Show Cell IDs
+            </label>
+        </div>
+        
+        <div class="control-group">
+            <label for="sampleSize">Sample Size: <span id="sampleValue">100</span></label>
+            <input type="range" id="sampleSize" min="10" max="2000" value="100" step="10">
+            <div class="sample-controls">
+                <button id="randomSample">Random</button>
+                <button id="firstSample" class="active">First N</button>
+                <button id="allCells">All Cells</button>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label for="centerOpacity">Center Opacity: <span id="centerOpacityValue">0.7</span></label>
+            <input type="range" id="centerOpacity" min="0.1" max="1" value="0.7" step="0.1">
+        </div>
+        
+        <div class="control-group">
+            <label for="boundaryOpacity">Boundary Opacity: <span id="boundaryOpacityValue">0.5</span></label>
+            <input type="range" id="boundaryOpacity" min="0.1" max="1" value="0.5" step="0.1">
+        </div>
+        
+        <div class="stats">
+            <div><strong>Data Statistics:</strong></div>
+            <div id="totalCells">Total Cells: -</div>
+            <div id="displayedCells">Displayed: -</div>
+            <div id="gridSize">Grid Size: -</div>
+            <div id="dataAccuracy">Data Status: Loading...</div>
+        </div>
+        
+        <div class="legend">
+            <div><strong>Legend:</strong></div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff6b6b; border-radius: 50%;"></div>
+                <span>Grid Centers</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(74, 144, 226, 0.3); border: 2px solid #4a90e2;"></div>
+                <span>Grid Boundaries</span>
+            </div>
+        </div>
+        
+        <div style="margin-top: 15px;">
+            <button onclick="zoomToFitAll()" style="width: 100%; padding: 8px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Zoom to Fit All
+            </button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Global variables
+        let map;
+        let centersData = null;
+        let boundariesData = null;
+        let centerMarkers = [];
+        let boundaryPolygons = [];
+        let currentSampleType = 'first';
+        
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([53.0, -8.0], 7);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+        
+        // Load data files
+        async function loadData() {
+            try {
+                const [centersResponse, boundariesResponse] = await Promise.all([
+                    fetch('./locations.json'),
+                    fetch('./grid_boundaries.json')
+                ]);
+                
+                centersData = await centersResponse.json();
+                boundariesData = await boundariesResponse.json();
+                
+                updateStats();
+                updateDisplay();
+                document.getElementById('loading').style.display = 'none';
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('dataAccuracy').textContent = 'Error loading data';
+                document.getElementById('loading').innerHTML = '<div style="color: red;">Error loading data files</div>';
+            }
+        }
+        
+        // Update statistics display
+        function updateStats() {
+            if (!centersData || !boundariesData) return;
+            
+            document.getElementById('totalCells').textContent = `Total Cells: ${centersData.total_cells}`;
+            document.getElementById('gridSize').textContent = `Grid Size: ${centersData.grid_size_miles} miles`;
+            
+            // Verify data consistency
+            const centersCount = centersData.cells.length;
+            const boundariesCount = boundariesData.cell_boundaries.length;
+            const gridSizeMatch = centersData.grid_size_miles === boundariesData.grid_size_miles;
+            
+            let status = 'OK';
+            if (centersCount !== boundariesCount) {
+                status = 'Cell count mismatch';
+            } else if (!gridSizeMatch) {
+                status = 'Grid size mismatch';
+            }
+            
+            document.getElementById('dataAccuracy').textContent = `Data Status: ${status}`;
+            document.getElementById('dataAccuracy').style.color = status === 'OK' ? 'green' : 'red';
+        }
+        
+        // Get sample of cells to display
+        function getSampleCells() {
+            if (!centersData) return [];
+            
+            const sampleSize = parseInt(document.getElementById('sampleSize').value);
+            const totalCells = centersData.cells.length;
+            const actualSampleSize = Math.min(sampleSize, totalCells);
+            
+            let selectedCells = [];
+            
+            if (currentSampleType === 'all') {
+                selectedCells = centersData.cells;
+            } else if (currentSampleType === 'random') {
+                const shuffled = [...centersData.cells].sort(() => 0.5 - Math.random());
+                selectedCells = shuffled.slice(0, actualSampleSize);
+            } else { // first
+                selectedCells = centersData.cells.slice(0, actualSampleSize);
+            }
+            
+            return selectedCells;
+        }
+        
+        // Clear all markers and polygons
+        function clearDisplay() {
+            centerMarkers.forEach(marker => map.removeLayer(marker));
+            boundaryPolygons.forEach(polygon => map.removeLayer(polygon));
+            centerMarkers = [];
+            boundaryPolygons = [];
+        }
+        
+        // Update map display
+        function updateDisplay() {
+            if (!centersData || !boundariesData) return;
+            
+            clearDisplay();
+            
+            const selectedCells = getSampleCells();
+            const showCenters = document.getElementById('showCenters').checked;
+            const showBoundaries = document.getElementById('showBoundaries').checked;
+            const showLabels = document.getElementById('showLabels').checked;
+            const centerOpacity = parseFloat(document.getElementById('centerOpacity').value);
+            const boundaryOpacity = parseFloat(document.getElementById('boundaryOpacity').value);
+            
+            selectedCells.forEach(cell => {
+                const cellId = cell.id;
+                
+                // Add center marker
+                if (showCenters) {
+                    const centerMarker = L.circleMarker([cell.latitude, cell.longitude], {
+                        radius: 4,
+                        fillColor: '#ff6b6b',
+                        color: '#d63031',
+                        weight: 1,
+                        opacity: centerOpacity,
+                        fillOpacity: centerOpacity
+                    });
+                    
+                    let popupContent = `
+                        <strong>Cell ${cellId}</strong><br>
+                        Center: ${cell.latitude.toFixed(6)}, ${cell.longitude.toFixed(6)}
+                    `;
+                    
+                    centerMarker.bindPopup(popupContent);
+                    centerMarker.addTo(map);
+                    centerMarkers.push(centerMarker);
+                    
+                    // Add label if requested
+                    if (showLabels) {
+                        const label = L.marker([cell.latitude, cell.longitude], {
+                            icon: L.divIcon({
+                                className: 'cell-label',
+                                html: cellId.toString(),
+                                iconSize: [20, 20],
+                                iconAnchor: [10, 10]
+                            })
+                        });
+                        label.addTo(map);
+                        centerMarkers.push(label);
+                    }
+                }
+                
+                // Add boundary polygon
+                if (showBoundaries) {
+                    const boundaryCell = boundariesData.cell_boundaries.find(b => b.id === cellId);
+                    if (boundaryCell && boundaryCell.boundaries.length >= 3) {
+                        const coords = boundaryCell.boundaries.map(point => [point.latitude, point.longitude]);
+                        
+                        const polygon = L.polygon(coords, {
+                            color: '#4a90e2',
+                            weight: 1,
+                            opacity: boundaryOpacity,
+                            fillColor: '#4a90e2',
+                            fillOpacity: boundaryOpacity * 0.3
+                        });
+                        
+                        let popupContent = `
+                            <strong>Cell ${cellId} Boundary</strong><br>
+                            Center: ${boundaryCell.center.latitude.toFixed(6)}, ${boundaryCell.center.longitude.toFixed(6)}<br>
+                            Boundary Points: ${boundaryCell.boundaries.length}
+                        `;
+                        
+                        // Verify center consistency
+                        if (Math.abs(cell.latitude - boundaryCell.center.latitude) > 0.001 || 
+                            Math.abs(cell.longitude - boundaryCell.center.longitude) > 0.001) {
+                            popupContent += '<br><span style="color: red;">⚠️ Center mismatch detected!</span>';
+                        }
+                        
+                        polygon.bindPopup(popupContent);
+                        polygon.addTo(map);
+                        boundaryPolygons.push(polygon);
+                    }
+                }
+            });
+            
+            document.getElementById('displayedCells').textContent = `Displayed: ${selectedCells.length}`;
+        }
+        
+        // Zoom to fit all displayed elements
+        function zoomToFitAll() {
+            const allLayers = [...centerMarkers, ...boundaryPolygons].filter(layer => 
+                layer instanceof L.CircleMarker || layer instanceof L.Polygon
+            );
+            
+            if (allLayers.length > 0) {
+                const group = new L.featureGroup(allLayers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+        
+        // Event listeners
+        function setupEventListeners() {
+            document.getElementById('showCenters').addEventListener('change', updateDisplay);
+            document.getElementById('showBoundaries').addEventListener('change', updateDisplay);
+            document.getElementById('showLabels').addEventListener('change', updateDisplay);
+            
+            document.getElementById('sampleSize').addEventListener('input', (e) => {
+                document.getElementById('sampleValue').textContent = e.target.value;
+                if (currentSampleType !== 'all') {
+                    updateDisplay();
+                }
+            });
+            
+            document.getElementById('centerOpacity').addEventListener('input', (e) => {
+                document.getElementById('centerOpacityValue').textContent = e.target.value;
+                updateDisplay();
+            });
+            
+            document.getElementById('boundaryOpacity').addEventListener('input', (e) => {
+                document.getElementById('boundaryOpacityValue').textContent = e.target.value;
+                updateDisplay();
+            });
+            
+            // Sample type buttons
+            document.getElementById('randomSample').addEventListener('click', () => {
+                currentSampleType = 'random';
+                updateSampleButtons();
+                updateDisplay();
+            });
+            
+            document.getElementById('firstSample').addEventListener('click', () => {
+                currentSampleType = 'first';
+                updateSampleButtons();
+                updateDisplay();
+            });
+            
+            document.getElementById('allCells').addEventListener('click', () => {
+                currentSampleType = 'all';
+                updateSampleButtons();
+                updateDisplay();
+            });
+        }
+        
+        // Update sample button states
+        function updateSampleButtons() {
+            document.querySelectorAll('.sample-controls button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            if (currentSampleType === 'random') {
+                document.getElementById('randomSample').classList.add('active');
+            } else if (currentSampleType === 'first') {
+                document.getElementById('firstSample').classList.add('active');
+            } else {
+                document.getElementById('allCells').classList.add('active');
+            }
+            
+            // Update sample size control visibility
+            const sampleSizeControl = document.getElementById('sampleSize').parentElement;
+            if (currentSampleType === 'all') {
+                sampleSizeControl.style.opacity = '0.5';
+                document.getElementById('sampleSize').disabled = true;
+            } else {
+                sampleSizeControl.style.opacity = '1';
+                document.getElementById('sampleSize').disabled = false;
+            }
+        }
+        
+        // Initialize everything
+        window.addEventListener('load', () => {
+            initMap();
+            setupEventListeners();
+            updateSampleButtons();
+            loadData();
+        });
+    </script>
+</body>
+</html> 
