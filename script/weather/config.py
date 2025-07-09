@@ -2,6 +2,7 @@
 
 # API Configuration
 OPENWEATHER_API_KEY = "f9f83e975580409ebaa104427233103"  # WeatherAPI.com API key
+## I know this is not a good pratice, so whoever going to deal this please fix it properly thx. 
 
 # File paths
 LOCATIONS_FILE = "script/map/uk_location_list.json"
