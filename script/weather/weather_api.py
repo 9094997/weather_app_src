@@ -52,21 +52,56 @@ class WeatherDataProcessor:
             'forecast': []
         }
         
-        # Add forecast data for next days
+        # Add forecast data for next days with hourly breakdown
         for day in raw_data['forecast']['forecastday']:
-            forecast_data = {
+            # Process daily summary
+            daily_summary = {
                 'date': day['date'],
-                'temperature': {
-                    'max': day['day']['maxtemp_c'],
-                    'min': day['day']['mintemp_c'],
-                    'average': day['day']['avgtemp_c']
+                'day_summary': {
+                    'temperature': {
+                        'max': day['day']['maxtemp_c'],
+                        'min': day['day']['mintemp_c'],
+                        'average': day['day']['avgtemp_c']
+                    },
+                    'condition': {
+                        'text': day['day']['condition']['text'],
+                        'code': day['day']['condition']['code']
+                    },
+                    'wind_kph': day['day']['maxwind_kph'],
+                    'precipitation_mm': day['day']['totalprecip_mm'],
+                    'humidity': day['day']['avghumidity'],
+                    'uv': day['day']['uv']
                 },
-                'condition': {
-                    'text': day['day']['condition']['text'],
-                    'code': day['day']['condition']['code']
-                }
+                'astro': {
+                    'sunrise': day['astro']['sunrise'],
+                    'sunset': day['astro']['sunset']
+                },
+                'hourly': []
             }
-            processed_data['forecast'].append(forecast_data)
+            
+            # Process hourly data
+            for hour in day['hour']:
+                hourly_data = {
+                    'time': hour['time'],
+                    'temp_c': hour['temp_c'],
+                    'is_day': hour['is_day'],
+                    'condition': {
+                        'text': hour['condition']['text'],
+                        'code': hour['condition']['code']
+                    },
+                    'wind_kph': hour['wind_kph'],
+                    'precip_mm': hour['precip_mm'],
+                    'humidity': hour['humidity'],
+                    'cloud': hour['cloud'],
+                    'feelslike_c': hour['feelslike_c'],
+                    'chance_of_rain': hour['chance_of_rain'],
+                    'chance_of_snow': hour['chance_of_snow'],
+                    'vis_km': hour['vis_km'],
+                    'uv': hour['uv']
+                }
+                daily_summary['hourly'].append(hourly_data)
+            
+            processed_data['forecast'].append(daily_summary)
         
         return processed_data
 
@@ -146,10 +181,12 @@ def main():
         return
     
     # Randomly select 20 locations from the total cells
-    total_cells = locations_data['cells']
-    selected_cells = random.sample(total_cells, min(500, len(total_cells)))
+    # total_cells = locations_data['cells']
+    # selected_cells = random.sample(total_cells, min(50, len(total_cells)))
+    # print(f"Processing weather data for {len(selected_cells)} randomly selected locations...")
     
-    print(f"Processing weather data for {len(selected_cells)} randomly selected locations...")
+    # use the following line to process all the cells or use the line abot to select random number of cells
+    selected_cells = locations_data['cells']
     
     # Process weather data for selected locations
     processed_weather_data = []

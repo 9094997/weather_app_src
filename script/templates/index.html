@@ -4,227 +4,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Travel Destination Finder</title>
+    <title>Weather Destination Finder</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.css">
     <style>
-        #map {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-        }
-        .form-container {
-            position: fixed;
-            top: 40%;
-            left: 65px;
-            transform: translateY(-50%);
-            width: 456px;
-            background-color: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(5px);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-            z-index: 1000;
-            max-height: calc(100vh - 40px);
-            overflow-y: auto;
-        }
-        .location-wrapper {
-            position: relative;
-        }
-        .location-suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-top: none;
-            border-radius: 0 0 1rem 1rem;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1001;
-            display: none;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .suggestion-item {
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-        }
-        .suggestion-item:hover {
-            background-color: #f7fafc;
-        }
-        .weather-icon {
-            width: 60px;
-            height: 60px;
-            border: 2px solid transparent;
-            border-radius: 16px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
-            backdrop-filter: blur(4px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            gap: 5px;
-            margin: 0 auto;
-        }
-        .weather-icon:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.9));
-        }
-        .weather-icon.selected {
-            border-color: #3B82F6;
-            background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-        }
-        .weather-icon i {
-            font-size: 24px;
-        }
-        .weather-icon span {
-            font-size: 12px;
-            text-align: center;
-        }
-        .weather-icon-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            justify-content: center;
-            align-items: center;
-        }
-        /* Hide Leaflet zoom control */
-        .leaflet-control-zoom {
-            display: none !important;
-        }
-        /* Custom scrollbar */
-        .form-container::-webkit-scrollbar {
-            width: 8px;
-        }
-        .form-container::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .form-container::-webkit-scrollbar-thumb {
-            background-color: rgba(0, 0, 0, 0.2);
-            border-radius: 4px;
-        }
-        /* Weather icon in results */
-        .weather-icon-result {
-            background: linear-gradient(135deg, #fff, #e5e7eb 80%);
-            border-radius: 50%;
-            padding: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 48px;
-            min-height: 48px;
-        }
-        .result-card-content {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .result-card-info {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-        /* Map marker popup */
-        .leaflet-popup-content {
-            background: linear-gradient(135deg, #fff, #e5e7eb 80%);
-            border-radius: 12px;
-            padding: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        /* Custom marker icon background */
-        .weather-marker-icon {
-            background: radial-gradient(circle, #fff 70%, #e5e7eb 100%);
-            border-radius: 50%;
-            border: 2.5px solid #e5e7eb;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-        }
-        /* Interactive distance ring styles */
-        .distance-control {
-            position: absolute;
-            background: white;
-            border: 2px solid #3B82F6;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            cursor: grab;
-            z-index: 1000;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: bold;
-            color: #3B82F6;
-        }
-        .distance-control:active {
-            cursor: grabbing;
-        }
-        .distance-label {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            color: #3B82F6;
-            white-space: nowrap;
-            z-index: 1001;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-        }
-        /* Date selector styles */
-        .date-selector {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .date-row {
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-            width: 100%;
-        }
-        .date-row.top {
-            margin-bottom: 8px;
-        }
-        .date-option {
-            padding: 8px 12px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            cursor: pointer;
-            text-align: center;
-            min-width: 60px;
-            transition: all 0.2s ease;
-            background: white;
-        }
-        .date-option:hover {
-            border-color: #3B82F6;
-            background: #f0f9ff;
-        }
-        .date-option.selected {
-            border-color: #3B82F6;
-            background: #3B82F6;
-            color: white;
-        }
-        .date-option .day-name {
-            font-size: 12px;
-            font-weight: bold;
-            display: block;
-        }
-        .date-option .day-date {
-            font-size: 14px;
-            display: block;
-        }
+      /* Custom style for noUiSlider to match Tailwind range slider */
+      #time-range-slider .noUi-connect {
+        background: #2563eb; /* Tailwind blue-600 */
+        height: 0.5rem;
+      }
+      #time-range-slider .noUi-base {
+        background: #e5e7eb; /* Tailwind gray-200 */
+        height: 0.5rem;
+        border-radius: 0.375rem;
+      }
+      #time-range-slider .noUi-handle {
+        background: #2563eb; /* Tailwind blue-600 */
+        border: none;
+        box-shadow: none;
+        border-radius: 9999px;
+        width: 2rem;
+        height: 2rem;
+        top: -0.75rem;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      #time-range-slider .noUi-handle:before, #time-range-slider .noUi-handle:after {
+        display: none;
+      }
+      #time-range-slider .noUi-tooltip {
+        background: #2563eb;
+        color: #fff;
+        border-radius: 0.375rem;
+        font-size: 1rem;
+        padding: 0.25rem 0.5rem;
+        border: none;
+        box-shadow: none;
+      }
     </style>
 </head>
 <body class="min-h-screen">
@@ -233,7 +52,7 @@
 
     <!-- Floating form -->
     <div class="form-container p-6">
-        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Find Your Destination</h1>
+        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Find Your Perfect Destination</h1>
         
         <form id="searchForm" class="space-y-6">
             <div class="location-wrapper">
@@ -246,43 +65,23 @@
             </div>
             
             <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">Weather:</label>
-                <input type="hidden" id="weather" value="Sunny">
-                <div class="weather-icon-row">
-                    <div class="weather-icon selected" data-weather="Sunny">
-                        <i class="fas fa-sun text-yellow-400"></i>
-                        <span>Sunny</span>
-                    </div>
-                    <div class="weather-icon" data-weather="Cloudy">
-                        <i class="fas fa-cloud text-gray-400"></i>
-                        <span>Cloudy</span>
-                    </div>
-                    <div class="weather-icon" data-weather="Rainy">
-                        <i class="fas fa-cloud-rain text-blue-400"></i>
-                        <span>Rainy</span>
-                    </div>
-                </div>
-                <div class="weather-icon-row mt-4">
-                    <div class="weather-icon" data-weather="Windy">
-                        <i class="fas fa-wind text-gray-500"></i>
-                        <span>Windy</span>
-                    </div>
-                    <div class="weather-icon" data-weather="Snowy">
-                        <i class="fas fa-snowflake text-blue-300"></i>
-                        <span>Snowy</span>
-                    </div>
-                    <div class="weather-icon" data-weather="Foggy">
-                        <i class="fas fa-smog text-gray-400"></i>
-                        <span>Foggy</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div>
                 <label class="block text-gray-700 text-sm font-bold mb-2">Travel Date:</label>
                 <input type="hidden" id="date" value="">
                 <div id="dateSelector" class="date-selector">
                     <!-- Date options will be populated by JavaScript -->
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Travel Hours:</label>
+                <div class="time-range-container">
+                  <div id="time-range-slider"></div>
+                  <div class="flex justify-between mt-2">
+                    <span id="start-time-label"></span>
+                    <span id="end-time-label"></span>
+                  </div>
+                  <input type="hidden" id="start-hour" name="start_hour" value="8">
+                  <input type="hidden" id="end-hour" name="end_hour" value="20">
                 </div>
             </div>
             
@@ -294,16 +93,128 @@
                     class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
             </div>
             
-            <button type="submit"
+            <button type="submit" id="searchButton"
                 class="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">
-                Search Destinations
+                <span id="searchButtonText">Find Destinations</span>
+                <span id="searchButtonSpinner" class="loading-spinner ml-2" style="display: none;"></span>
             </button>
         </form>
         
-        <div id="results" class="mt-8 space-y-4"></div>
+        <!-- Mode tabs container -->
+        <div id="modeTabsContainer" class="mt-6" style="display: none;">
+            <div class="flex border-b border-gray-200 mb-4">
+                <button id="guidedModeTab" class="mode-tab px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600 bg-white">
+                    Guided Mode
+                </button>
+                <button id="browseModeTab" class="mode-tab px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300">
+                    Browse Mode
+                </button>
+            </div>
+            
+            <!-- Guided Mode Content -->
+            <div id="guidedModeContent" class="mode-content" style="display: block;">
+                <div id="results" class="space-y-4"></div>
+            </div>
+            
+            <!-- Browse Mode Content -->
+            <div id="browseModeContent" class="mode-content" style="display: none;">
+                <div class="text-center mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Project Weather Indices</h3>
+                    <p class="text-gray-600 text-sm mb-4">Visualize predicted weather patterns across the 8x8 mile grid system</p>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" id="projectSunnyButton"
+                            class="projection-button bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-2 px-4 rounded-lg hover:from-yellow-500 hover:to-orange-600 transition-all">
+                            <span id="projectSunnyButtonText">
+                                <i class="fas fa-sun mr-2"></i>Project Sunny Index
+                            </span>
+                            <span id="projectSunnyButtonSpinner" class="loading-spinner ml-2" style="display: none;"></span>
+                        </button>
+                        
+                        <button type="button" id="projectComfortButton"
+                            class="projection-button bg-gradient-to-r from-green-400 to-blue-500 text-white py-2 px-4 rounded-lg hover:from-green-500 hover:to-blue-600 transition-all">
+                            <span id="projectComfortButtonText">
+                                <i class="fas fa-thermometer-half mr-2"></i>Project Comfort Index
+                            </span>
+                            <span id="projectComfortButtonSpinner" class="loading-spinner ml-2" style="display: none;"></span>
+                        </button>
+                    </div>
+                    
+                    <!-- Index Legend -->
+                    <div id="indexLegend" class="mt-4 p-3 bg-gray-50 rounded-lg" style="display: none;">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-2">Index Scale</h4>
+                        <div id="legendContent" class="flex justify-center items-center space-x-4">
+                            <!-- Legend content will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <button type="button" id="clearProjectionButton" 
+                        class="mt-3 w-full bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors" 
+                        style="display: none;">
+                        <i class="fas fa-times mr-2"></i>Clear Projection
+                    </button>
+                </div>
+                
+                <div id="browseResults" class="space-y-4">
+                    <!-- Grid cell information and controls will be displayed here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Initial results area (before mode tabs are shown) -->
+        <div id="initialResults" class="mt-8 space-y-4"></div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.js"></script>
+    <script>
+    // Hour range slider setup (08:00 to 20:00 only)
+    const slider = document.getElementById('time-range-slider');
+    const startLabel = document.getElementById('start-time-label');
+    const endLabel = document.getElementById('end-time-label');
+    const startInput = document.getElementById('start-hour');
+    const endInput = document.getElementById('end-hour');
+    // Only hours 8 to 20
+    const hours = [];
+    for (let i = 8; i <= 20; i++) {
+      hours.push(i.toString().padStart(2, '0') + ':00');
+    }
+    noUiSlider.create(slider, {
+      start: [8, 20],
+      connect: true,
+      step: 1,
+      range: {
+        min: 8,
+        max: 20
+      },
+      tooltips: [true, true],
+      format: {
+        to: value => hours[Math.round(value) - 8],
+        from: value => hours.indexOf(value) + 8
+      }
+    });
+    slider.noUiSlider.on('update', function(values, handle, unencoded) {
+      const start = Math.round(unencoded[0]);
+      const end = Math.round(unencoded[1]);
+      startLabel.textContent = hours[start - 8];
+      endLabel.textContent = hours[end - 8];
+      startInput.value = start;
+      endInput.value = end;
+    });
+    // Enforce minimum 1 hour range
+    slider.noUiSlider.on('change', function(values, handle, unencoded) {
+      let start = Math.round(unencoded[0]);
+      let end = Math.round(unencoded[1]);
+      if (end - start < 1) {
+        if (handle === 0) {
+          start = end - 1;
+        } else {
+          end = start + 1;
+        }
+        slider.noUiSlider.set([start, end]);
+      }
+    });
+    </script>
 </body>
 </html>

@@ -14,7 +14,8 @@ from tqdm import tqdm
 
 def download_world_data():
     """Download the world countries shapefile"""
-    data_dir = Path("map_data")
+    # Save map_data inside the map directory
+    data_dir = Path(__file__).parent / "map_data"
     data_dir.mkdir(exist_ok=True)
     
     url = "https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.zip"
@@ -64,6 +65,29 @@ def get_location_name(lat, lon, geolocator):
     
     return 'Unknown'
 
+def generate_cell_boundaries(center_x, center_y, grid_size, to_wgs84):
+    """Generate boundary coordinates for a grid cell"""
+    # Calculate the four corners of the cell in British National Grid coordinates
+    half_size = grid_size / 2
+    
+    # Define the four corners (clockwise from top-left)
+    corners_bng = [
+        (center_x - half_size, center_y + half_size),  # Top-left
+        (center_x + half_size, center_y + half_size),  # Top-right
+        (center_x + half_size, center_y - half_size),  # Bottom-right
+        (center_x - half_size, center_y - half_size),  # Bottom-left
+    ]
+    
+    # Convert corners to WGS84 (lat/lon)
+    corners_wgs84 = []
+    for corner_x, corner_y in corners_bng:
+        lon, lat = to_wgs84.transform(corner_x, corner_y)
+        corners_wgs84.append({
+            'latitude': round(lat, 6),
+            'longitude': round(lon, 6)
+        })
+    
+    return corners_wgs84
 
 def generate_and_visualize_uk_ireland_grid():
     print("Starting grid generation...")
@@ -96,6 +120,7 @@ def generate_and_visualize_uk_ireland_grid():
     y_cells = int(np.ceil((bounds[3] - bounds[1]) / grid_size))
     
     grid_cells = []
+    grid_boundaries = []
     
     print(f"Generating grid: {x_cells} x {y_cells} cells")
     total_cells = x_cells * y_cells
@@ -121,13 +146,25 @@ def generate_and_visualize_uk_ireland_grid():
                 
                 # Convert center point back to lat/lon
                 lon, lat = to_wgs84.transform(center_x, center_y)
-                ## IMPORTANT!!! we descide to not get the location name from geolocator as it can be time consuming, we will send the lat and lon to weather api and get the location name from the reposne.
-                ##location_name = get_location_name(lat, lon, geolocator)
                 
-                ## if we want to add the location name to the json in the future then just add it below. 
+                # Generate boundary coordinates for this cell
+                boundaries = generate_cell_boundaries(center_x, center_y, grid_size, to_wgs84)
+                
+                cell_id = len(grid_cells)
+                
                 grid_cells.append({
+                    'id': cell_id,
                     'latitude': round(lat, 6),
                     'longitude': round(lon, 6)
+                })
+                
+                grid_boundaries.append({
+                    'id': cell_id,
+                    'center': {
+                        'latitude': round(lat, 6),
+                        'longitude': round(lon, 6)
+                    },
+                    'boundaries': boundaries
                 })
     
     # Save to JSON
@@ -137,10 +174,24 @@ def generate_and_visualize_uk_ireland_grid():
         'cells': grid_cells
     }
     
-    print(f"Generated {len(grid_cells)} grid cells")
+    # Save boundaries to separate file
+    boundaries_output = {
+        'grid_size_miles': 8,
+        'total_cells': len(grid_boundaries),
+        'cell_boundaries': grid_boundaries
+    }
     
-    with open('script/map/uk_location_list.json', 'w') as f:
+    print(f"Generated {len(grid_cells)} grid cells with boundaries")
+    
+    # Save locations.json inside the map directory
+    output_json_path = Path(__file__).parent / 'locations.json'
+    with open(output_json_path, 'w') as f:
         json.dump(output, f, indent=2)
+    
+    # Save grid boundaries to separate file
+    boundaries_json_path = Path(__file__).parent / 'grid_boundaries.json'
+    with open(boundaries_json_path, 'w') as f:
+        json.dump(boundaries_output, f, indent=2)
     
     # Visualization part
     print("Creating visualization...")
@@ -156,21 +207,25 @@ def generate_and_visualize_uk_ireland_grid():
     min_lat, max_lat = min(lats), max(lats)
     min_lon, max_lon = min(lons), max(lons)
     
-    # Plot each grid cell
-    for cell in grid_cells:
-        lat = cell['latitude']
-        lon = cell['longitude']
+    # Plot each grid cell with boundaries
+    for boundary_data in grid_boundaries:
+        boundaries = boundary_data['boundaries']
+        
+        # Extract boundary coordinates
+        boundary_lons = [point['longitude'] for point in boundaries]
+        boundary_lats = [point['latitude'] for point in boundaries]
         
         # Convert to plot coordinates
-        x = (lon - min_lon) / (max_lon - min_lon)
-        y = (lat - min_lat) / (max_lat - min_lat)
+        plot_x = [(lon - min_lon) / (max_lon - min_lon) for lon in boundary_lons]
+        plot_y = [(lat - min_lat) / (max_lat - min_lat) for lat in boundary_lats]
         
-        # Create rectangle
-        rect = Rectangle((x-0.005, y-0.005), 0.01, 0.01, 
-                        facecolor='forestgreen', 
-                        edgecolor='white',
-                        linewidth=0.5)
-        ax.add_patch(rect)
+        # Create polygon from boundaries
+        from matplotlib.patches import Polygon
+        polygon = Polygon(list(zip(plot_x, plot_y)), 
+                         facecolor='forestgreen', 
+                         edgecolor='white',
+                         linewidth=0.5)
+        ax.add_patch(polygon)
     
     # Set plot limits
     ax.set_xlim(-0.01, 1.01)
@@ -189,7 +244,7 @@ def generate_and_visualize_uk_ireland_grid():
              fontsize=10)
     
     # Add title
-    plt.title('UK & Ireland: 8x8 Mile Grid', pad=20, fontsize=14)
+    plt.title('UK & Ireland: 8x8 Mile Grid with Boundaries', pad=20, fontsize=14)
     
     # Set background color
     ax.set_facecolor('lightgray')
@@ -200,13 +255,14 @@ def generate_and_visualize_uk_ireland_grid():
         spine.set_visible(True)
     
     # Save the plot
-    plt.savefig('script/map/uk_ireland_grid_visualization.png', 
+    plot_path = Path(__file__).parent / 'uk_ireland_grid_visualization.png'
+    plt.savefig(plot_path, 
                 dpi=300, 
                 bbox_inches='tight',
                 facecolor='white')
     plt.close()
     
-    print("Completed! Files saved: uk_ireland_grid_8mile.json and uk_ireland_grid_visualization.png")
+    print("Completed! Files saved: locations.json, grid_boundaries.json and uk_ireland_grid_visualization.png")
 
 if __name__ == "__main__":
     # Run the combined function

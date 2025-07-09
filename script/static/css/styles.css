@@ -1,0 +1,587 @@
+/* Map container styles */
+#map {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+/* Form container styles */
+.form-container {
+    position: fixed;
+    top: 50%;
+    left: 65px;
+    transform: translateY(-50%);
+    width: 456px;
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(5px);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    max-width: calc(100vw - 130px);
+}
+
+/* Location autocomplete styles */
+.location-wrapper {
+    position: relative;
+}
+
+.location-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-top: none;
+    border-radius: 0 0 1rem 1rem;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1001;
+    display: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.suggestion-item {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.suggestion-item:hover {
+    background-color: #f7fafc;
+}
+
+/* Hide Leaflet zoom control */
+.leaflet-control-zoom {
+    display: none !important;
+}
+
+/* Custom scrollbar */
+.form-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.form-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.form-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+/* Score styles */
+.sunny-score-circle {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    border-radius: 50%;
+    padding: 8px;
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    min-height: 48px;
+}
+
+.comfort-score-circle {
+    background: linear-gradient(135deg, #4ade80, #3b82f6);
+    border-radius: 50%;
+    padding: 8px;
+    box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    min-height: 48px;
+}
+
+.sunny-score-info,
+.comfort-score-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sunny-marker-icon {
+    background: radial-gradient(circle, #fbbf24 70%, #f59e0b 100%);
+    border-radius: 50%;
+    border: 2.5px solid #f59e0b;
+    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.4);
+}
+
+.comfort-marker-icon {
+    background: radial-gradient(circle, #4ade80 70%, #3b82f6 100%);
+    border-radius: 50%;
+    border: 2.5px solid #3b82f6;
+    box-shadow: 0 2px 8px rgba(74, 222, 128, 0.4);
+}
+
+.result-card-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.result-card-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Map marker popup */
+.leaflet-popup-content {
+    background: linear-gradient(135deg, #fff, #e5e7eb 80%);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Sort dropdown styles */
+.sort-dropdown {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 0.25rem;
+    width: 12rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    z-index: 1001;
+    overflow: hidden;
+}
+
+.sort-dropdown button {
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    color: #374151;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.sort-dropdown button:hover {
+    background-color: #f3f4f6;
+}
+
+.sort-dropdown button:first-child {
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+}
+
+.sort-dropdown button:last-child {
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+}
+
+/* Interactive distance ring styles */
+.distance-control {
+    position: absolute;
+    background: white;
+    border: 3px solid #3B82F6;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: grab;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    color: #3B82F6;
+    pointer-events: auto;
+    user-select: none;
+    top: 0;
+    left: 0;
+    transition: all 0.2s ease;
+}
+
+.distance-control:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+}
+
+.distance-control:active {
+    cursor: grabbing;
+    transform: scale(0.95);
+}
+
+.distance-control-handle {
+    width: 28px;
+    height: 28px;
+    background: #3B82F6;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(59,130,246,0.3);
+    cursor: grab;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.distance-handle-marker .distance-control-handle:hover {
+    box-shadow: 0 4px 16px rgba(59,130,246,0.5);
+    transform: scale(1.1);
+}
+
+.distance-label {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #3B82F6;
+    white-space: nowrap;
+    z-index: 1001;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    pointer-events: none;
+    user-select: none;
+    top: 0;
+    left: 0;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    backdrop-filter: blur(4px);
+}
+
+.distance-label-content {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.distance-value {
+    font-weight: bold;
+}
+
+.distance-unit {
+    font-size: 10px;
+    opacity: 0.8;
+}
+
+.leaflet-tooltip.distance-label-tooltip {
+    background: rgba(255,255,255,0.95);
+    color: #2563eb;
+    border-radius: 6px;
+    border: 1.5px solid #2563eb;
+    font-size: 1rem;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(59,130,246,0.15);
+    padding: 6px 12px;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* Time range container */
+.time-range-container {
+    width: 100%;
+    margin: 20px 0;
+}
+
+/* Date selector styles */
+.date-selector {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.date-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    width: 100%;
+}
+
+.date-row.top {
+    margin-bottom: 8px;
+}
+
+.date-option {
+    padding: 8px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    min-width: 60px;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.date-option:hover {
+    border-color: #3B82F6;
+    background: #f0f9ff;
+}
+
+.date-option.selected {
+    border-color: #3B82F6;
+    background: #3B82F6;
+    color: white;
+}
+
+.date-option .day-name {
+    font-size: 12px;
+    font-weight: bold;
+    display: block;
+}
+
+.date-option .day-date {
+    font-size: 14px;
+    display: block;
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3B82F6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Error states */
+.error-message {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 8px 0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .form-container {
+        position: relative;
+        top: 0;
+        left: 0;
+        right: 0;
+        transform: none;
+        width: 100%;
+        max-width: 100%;
+        border-radius: 0;
+        margin: 0;
+        padding: 1rem;
+        max-height: 100vh;
+        overflow-y: auto;
+    }
+    
+    .date-option {
+        min-width: 50px;
+        padding: 6px 8px;
+    }
+    
+    .result-card-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .tab-buttons {
+        flex-direction: column;
+    }
+    
+    .tab-buttons button {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .form-container {
+        padding: 0.75rem;
+    }
+    
+    .date-selector {
+        gap: 4px;
+    }
+    
+    .date-option {
+        padding: 0.375rem;
+        font-size: 0.75rem;
+        min-width: 40px;
+    }
+    
+    .sunny-score-circle,
+    .comfort-score-circle {
+        min-width: 40px;
+        min-height: 40px;
+    }
+    
+    .sunny-score-circle .w-16,
+    .comfort-score-circle .w-16 {
+        width: 3rem;
+        height: 3rem;
+    }
+}
+
+/* Grid cells button styles */
+#showCellsButton {
+    transition: all 0.3s ease;
+}
+
+#showCellsButton:hover {
+    background-color: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+#showCellsButton:active {
+    transform: translateY(0);
+}
+
+#showCellsButton.loading {
+    background-color: #6b7280;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Projection buttons styling */
+.projection-button {
+    transition: all 0.3s ease;
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.projection-button:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.projection-button:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.projection-button.loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.projection-button.active {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+    transform: scale(1.05);
+}
+
+/* Index legend styling */
+#indexLegend {
+    animation: slideDown 0.3s ease-out;
+    border: 1px solid #e5e7eb;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #374151;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    margin-right: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Clear projection button */
+#clearProjectionButton {
+    animation: fadeIn 0.3s ease-in;
+}
+
+/* Grid cell projection colors */
+.grid-cell-low {
+    fill-opacity: 0.3 !important;
+    stroke-opacity: 0.8 !important;
+}
+
+.grid-cell-medium {
+    fill-opacity: 0.5 !important;
+    stroke-opacity: 0.9 !important;
+}
+
+.grid-cell-high {
+    fill-opacity: 0.7 !important;
+    stroke-opacity: 1 !important;
+}
+
+/* Grid cell polygon popup styling */
+.leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.leaflet-popup-content {
+    margin: 8px 12px;
+    line-height: 1.4;
+}
+
+/* Grid cell hover effects */
+.leaflet-interactive:hover {
+    stroke-opacity: 1 !important;
+    fill-opacity: 0.3 !important;
+}
+
+/* Mode tabs styling */
+.mode-tab {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.mode-tab:hover {
+    background-color: #f9fafb;
+}
+
+.mode-content {
+    transition: opacity 0.3s ease;
+}
+
+/* Browse mode specific styling */
+#browseModeContent {
+    min-height: 200px;
+}
+
+#browseModeContent .text-center {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Mode tabs container */
+#modeTabsContainer {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { 
+        opacity: 0; 
+        transform: translateY(-10px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+} 
