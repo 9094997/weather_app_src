@@ -181,10 +181,12 @@ def main():
         return
     
     # Randomly select 20 locations from the total cells
-    total_cells = locations_data['cells']
-    selected_cells = random.sample(total_cells, min(500, len(total_cells)))
+    # total_cells = locations_data['cells']
+    # selected_cells = random.sample(total_cells, min(50, len(total_cells)))
+    # print(f"Processing weather data for {len(selected_cells)} randomly selected locations...")
     
-    print(f"Processing weather data for {len(selected_cells)} randomly selected locations...")
+    # use the following line to process all the cells or use the line abot to select random number of cells
+    selected_cells = locations_data['cells']
     
     # Process weather data for selected locations
     processed_weather_data = []

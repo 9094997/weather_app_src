@@ -28,7 +28,13 @@ const AppState = {
     currentSearch: null,
     currentTab: null,
     tabButtons: null,
-    debouncedFunctions: new Set() // Track debounced functions for cleanup
+    debouncedFunctions: new Set(), // Track debounced functions for cleanup
+    gridCellManager: null,
+    currentMode: 'guided', // 'guided' or 'browse'
+    currentData: null,
+    currentDestinations: null,
+    currentType: null,
+    currentSort: null
 };
 
 // Utility functions
@@ -63,7 +69,7 @@ const Utils = {
         }
     },
 
-    showError(message, containerId = 'results') {
+    showError(message, containerId = 'initialResults') {
         const container = document.getElementById(containerId);
         if (!container) return;
         
@@ -77,24 +83,57 @@ const Utils = {
     },
 
     clearResults() {
+        // Clear both results containers
         const resultsDiv = document.getElementById('results');
+        const initialResultsDiv = document.getElementById('initialResults');
+        const browseResultsDiv = document.getElementById('browseResults');
+        const modeTabsContainer = document.getElementById('modeTabsContainer');
+        
         if (resultsDiv) {
             resultsDiv.innerHTML = '';
         }
         
-        // Clean up scroll to top button
-        if (AppState.scrollToTopBtn) {
-            AppState.scrollToTopBtn.remove();
-            AppState.scrollToTopBtn = null;
+        if (initialResultsDiv) {
+            initialResultsDiv.innerHTML = '';
+            initialResultsDiv.style.display = 'block'; // Show initialResults for new searches
         }
         
-        // Remove old markers
+        if (browseResultsDiv) {
+            browseResultsDiv.innerHTML = '';
+        }
+        
+        // Hide mode tabs container when clearing results
+        if (modeTabsContainer) {
+            modeTabsContainer.style.display = 'none';
+        }
+        
+        // Clear any active projections in browse mode
+        if (AppState.gridCellManager) {
+            AppState.gridCellManager.clearProjection();
+        }
+        
+        // Remove existing markers from map
         AppState.markers.forEach(marker => {
             if (AppState.map && AppState.map.hasLayer(marker)) {
                 AppState.map.removeLayer(marker);
             }
         });
         AppState.markers = [];
+        
+        // Clean up scroll to top button if it exists
+        if (AppState.scrollToTopBtn) {
+            AppState.scrollToTopBtn.remove();
+            AppState.scrollToTopBtn = null;
+        }
+        
+        // Reset state
+        AppState.currentTab = null;
+        AppState.tabButtons = null;
+        AppState.currentData = null;
+        AppState.currentDestinations = null;
+        AppState.currentType = null;
+        AppState.currentSort = null;
+        AppState.currentMode = 'guided'; // Reset to guided mode
     },
     
     // Safe DOM element creation with error handling
@@ -475,20 +514,33 @@ function setupFormSubmission() {
             const data = await response.json();
 
             if (!data.sunny_destinations || data.sunny_destinations.length === 0) {
-                const resultsDiv = document.getElementById('results');
-                if (resultsDiv) {
-                    resultsDiv.innerHTML = '<p class="text-center text-gray-500">No destinations found within your criteria.</p>';
+                const initialResultsDiv = document.getElementById('initialResults');
+                if (initialResultsDiv) {
+                    initialResultsDiv.innerHTML = '<p class="text-center text-gray-500">No destinations found within your criteria.</p>';
                 }
                 return;
             }
 
-            displayResults(data);
+            // Show mode tabs and display results in guided mode
+            showModeTabsWithResults(data);
         } catch (error) {
             console.error('Error:', error);
+            
+            // Determine the correct error container based on current state
+            let errorContainer = 'initialResults';
+            const modeTabsContainer = document.getElementById('modeTabsContainer');
+            
+            if (modeTabsContainer && modeTabsContainer.style.display !== 'none') {
+                // Mode tabs are visible, show error in results
+                errorContainer = 'results';
+            }
+            
+            console.log('Showing error in container:', errorContainer);
+            
             if (error.name === 'AbortError') {
-                Utils.showError('Request timed out. Please try again.');
+                Utils.showError('Request timed out. Please try again.', errorContainer);
             } else {
-                Utils.showError('An error occurred while searching for destinations. Please try again.');
+                Utils.showError('An error occurred while searching for destinations. Please try again.', errorContainer);
             }
         } finally {
             Utils.showLoading(false);
@@ -502,12 +554,6 @@ function displayResults(data) {
     const resultsDiv = document.getElementById('results');
     if (!resultsDiv) return;
     
-    // Validate data
-    if (!data.sunny_destinations || !data.comfortable_destinations) {
-        Utils.showError('Invalid data received from server');
-        return;
-    }
-    
     // Create tabs container
     const tabsContainer = document.createElement('div');
     tabsContainer.className = 'mb-6';
@@ -518,12 +564,12 @@ function displayResults(data) {
     
     const sunnyTab = document.createElement('button');
     sunnyTab.className = 'px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600 bg-white';
-    sunnyTab.textContent = `Sunny Destinations (${data.sunny_destinations.length})`;
+    sunnyTab.textContent = `Sunny Destinations (${data.sunny_destinations ? data.sunny_destinations.length : 0})`;
     sunnyTab.onclick = () => switchTab('sunny', AppState.currentData);
     
     const comfortTab = document.createElement('button');
     comfortTab.className = 'px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300';
-    comfortTab.textContent = `Comfortable Destinations (${data.comfortable_destinations.length})`;
+    comfortTab.textContent = `Comfortable Destinations (${data.comfortable_destinations ? data.comfortable_destinations.length : 0})`;
     comfortTab.onclick = () => switchTab('comfort', AppState.currentData);
     
     tabButtons.appendChild(sunnyTab);
@@ -543,7 +589,9 @@ function displayResults(data) {
     AppState.currentData = data;
     
     // Show sunny destinations by default
-    displaySunnyDestinations(data.sunny_destinations);
+    if (data.sunny_destinations && data.sunny_destinations.length > 0) {
+        displaySunnyDestinations(data.sunny_destinations);
+    }
 
     if (AppState.distanceCircleManager && AppState.distanceCircleManager.center) {
         AppState.distanceCircleManager.show();
@@ -873,12 +921,627 @@ function ensureFormContainerInViewport() {
     }
 }
 
+// Mode management functions
+function showModeTabsWithResults(data) {
+    const modeTabsContainer = document.getElementById('modeTabsContainer');
+    const initialResults = document.getElementById('initialResults');
+    
+    if (!modeTabsContainer) return;
+    
+    // Hide initial results and show mode tabs container
+    if (initialResults) initialResults.style.display = 'none';
+    modeTabsContainer.style.display = 'block';
+    
+    // Store the data
+    AppState.currentData = data;
+    
+    // Set initial mode to guided
+    AppState.currentMode = 'guided';
+    
+    // Ensure proper content visibility for guided mode
+    const guidedContent = document.getElementById('guidedModeContent');
+    const browseContent = document.getElementById('browseModeContent');
+    
+    if (guidedContent) guidedContent.style.display = 'block';
+    if (browseContent) browseContent.style.display = 'none';
+    
+    // Update tab styles and display results
+    updateModeTabStyles();
+    displayResults(data);
+}
+
+function setupModeTabsNavigation() {
+    const guidedModeTab = document.getElementById('guidedModeTab');
+    const browseModeTab = document.getElementById('browseModeTab');
+    
+    if (!guidedModeTab || !browseModeTab) return;
+    
+    guidedModeTab.addEventListener('click', () => {
+        switchToMode('guided');
+    });
+    
+    browseModeTab.addEventListener('click', () => {
+        switchToMode('browse');
+    });
+}
+
+function switchToMode(mode) {
+    if (AppState.currentMode === mode) return;
+    
+    AppState.currentMode = mode;
+    updateModeTabStyles();
+    
+    const guidedContent = document.getElementById('guidedModeContent');
+    const browseContent = document.getElementById('browseModeContent');
+    
+    if (mode === 'guided') {
+        if (guidedContent) guidedContent.style.display = 'block';
+        if (browseContent) browseContent.style.display = 'none';
+        
+        // Clear any projections when switching to guided mode
+        if (AppState.gridCellManager) {
+            AppState.gridCellManager.clearProjection();
+        }
+        
+        // Restore guided mode markers to the map
+        restoreGuidedModeMarkers();
+        
+        // Display guided mode results if available
+        if (AppState.currentData) {
+            displayResults(AppState.currentData);
+        }
+    } else {
+        if (guidedContent) guidedContent.style.display = 'none';
+        if (browseContent) browseContent.style.display = 'block';
+        
+        // Clear guided mode markers from the map when switching to browse mode
+        clearGuidedModeMarkers();
+        
+        // Clear browse results and initialize browse mode
+        const browseResults = document.getElementById('browseResults');
+        if (browseResults) {
+            browseResults.innerHTML = '';
+        }
+        
+        // Initialize browse mode with appropriate messaging
+        initializeBrowseMode();
+    }
+}
+
+function updateModeTabStyles() {
+    const guidedModeTab = document.getElementById('guidedModeTab');
+    const browseModeTab = document.getElementById('browseModeTab');
+    
+    if (!guidedModeTab || !browseModeTab) return;
+    
+    // Reset all tab styles
+    guidedModeTab.className = 'mode-tab px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300';
+    browseModeTab.className = 'mode-tab px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300';
+    
+    // Set active tab style
+    if (AppState.currentMode === 'guided') {
+        guidedModeTab.className = 'mode-tab px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600 bg-white';
+    } else {
+        browseModeTab.className = 'mode-tab px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600 bg-white';
+    }
+}
+
+// Helper functions for managing guided mode markers
+function clearGuidedModeMarkers() {
+    // Hide all destination markers
+    AppState.markers.forEach(marker => {
+        if (AppState.map.hasLayer(marker)) {
+            AppState.map.removeLayer(marker);
+        }
+    });
+    
+    // Keep the starting point marker and distance circle visible for Browse Mode
+    // as they're needed for the projection functionality
+}
+
+function restoreGuidedModeMarkers() {
+    // Restore all destination markers
+    AppState.markers.forEach(marker => {
+        if (!AppState.map.hasLayer(marker)) {
+            marker.addTo(AppState.map);
+        }
+    });
+}
+
+function initializeBrowseMode() {
+    const browseResults = document.getElementById('browseResults');
+    if (!browseResults) return;
+    
+    // Clear any existing content
+    browseResults.innerHTML = '';
+    
+    // Check if we have a starting location
+    if (!AppState.distanceCircleManager || !AppState.distanceCircleManager.center) {
+        browseResults.innerHTML = `
+            <div class="text-center p-6 bg-blue-50 rounded-lg border border-blue-200">
+                <i class="fas fa-info-circle text-blue-500 text-2xl mb-3"></i>
+                <h3 class="font-semibold text-blue-800 mb-2">Getting Started with Browse Mode</h3>
+                <p class="text-blue-700 text-sm mb-4">
+                    To use weather projections, please first set a starting location by performing a search in Guided Mode.
+                </p>
+                <p class="text-blue-600 text-xs">
+                    Once you have a starting location, you can project weather indices across the grid system.
+                </p>
+            </div>
+        `;
+    } else {
+        const center = AppState.distanceCircleManager.center;
+        const radius = AppState.distanceCircleManager.radius;
+        
+        browseResults.innerHTML = `
+            <div class="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                <i class="fas fa-check-circle text-green-500 text-xl mb-2"></i>
+                <h3 class="font-semibold text-green-800 mb-2">Ready for Weather Projections</h3>
+                <p class="text-green-700 text-sm mb-2">
+                    Starting location: ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}
+                </p>
+                <p class="text-green-600 text-xs">
+                    Search radius: ${radius} miles • Click a projection button above to begin
+                </p>
+            </div>
+        `;
+    }
+}
+
+// Weather projection management
+class WeatherProjectionManager {
+    constructor(map) {
+        this.map = map;
+        this.gridCells = [];
+        this.currentProjection = null; // 'sunny', 'comfort', or null
+        this.isLoading = false;
+    }
+
+    async projectIndex(indexType, centerLat, centerLon, radiusMiles) {
+        if (this.isLoading) return;
+        
+        try {
+            this.isLoading = true;
+            this.showProjectionLoading(indexType, true);
+            
+            // Clear existing projection
+            this.clearProjection();
+            
+            // Get current search parameters from the form or use defaults
+            const dateInput = document.getElementById('date');
+            const startHourInput = document.getElementById('start_hour');
+            const endHourInput = document.getElementById('end_hour');
+            
+            const targetDate = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+            const startHour = startHourInput ? parseInt(startHourInput.value) : 9;
+            const endHour = endHourInput ? parseInt(endHourInput.value) : 17;
+            
+            // Fetch real weather data for cells within radius
+            const params = new URLSearchParams({
+                lat: centerLat,
+                lon: centerLon,
+                radius: radiusMiles,
+                index_type: indexType,
+                date: targetDate,
+                start_hour: startHour,
+                end_hour: endHour
+            });
+            
+            const response = await fetch(`/project-weather-index?${params}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            // Create colored cells using real weather scores
+            let successfulCells = 0;
+            data.cells.forEach(cell => {
+                if (cell.weather_score && cell.weather_score.score > 0) {
+                    this.createProjectedCell(cell, indexType, cell.weather_score.score, cell.weather_score);
+                    successfulCells++;
+                }
+            });
+            
+            if (successfulCells === 0) {
+                throw new Error('No weather data available for any grid cells in the selected area');
+            }
+            
+            this.currentProjection = indexType;
+            this.showLegend(indexType);
+            this.showClearButton();
+            this.setActiveButton(indexType);
+            
+            console.log(`Projected ${indexType} index for ${data.cells.length} grid cells using real weather data`);
+            console.log(`Date: ${data.target_date}, Time: ${data.time_range}`);
+            
+            // Update browse results with projection info
+            this.updateBrowseResults(data);
+            
+        } catch (error) {
+            console.error('Error projecting index:', error);
+            Utils.showError('Error loading projection: ' + error.message, 'browseResults');
+        } finally {
+            this.isLoading = false;
+            this.showProjectionLoading(indexType, false);
+        }
+    }
+
+    createProjectedCell(cell, indexType, value, weatherScore = null) {
+        const boundaries = cell.boundaries;
+        if (!boundaries || boundaries.length < 4) return;
+        
+        // Convert boundaries to Leaflet LatLng format
+        const polygonPoints = boundaries.map(point => [point.latitude, point.longitude]);
+        
+        // Get color based on index type and value
+        const { color, fillColor, className } = this.getProjectionColors(indexType, value);
+        
+        // Create polygon with projection colors
+        const polygon = L.polygon(polygonPoints, {
+            color: color,
+            fillColor: fillColor,
+            fillOpacity: 0.6,
+            weight: 1.5,
+            opacity: 0.8,
+            className: className
+        });
+        
+        // Add popup with projection info
+        const indexName = indexType === 'sunny' ? 'Sunny' : 'Comfort';
+        const level = weatherScore ? weatherScore.level : this.getIndexLevel(value);
+        const closestLocation = weatherScore ? weatherScore.closest_location : 'Unknown';
+        
+        // Use actual location name from weather data instead of Grid Cell #
+        const locationName = weatherScore && weatherScore.closest_location && weatherScore.closest_location !== 'Unknown'
+            ? weatherScore.closest_location 
+            : `Grid Cell #${cell.id}`;
+        
+        let popupContent = `
+            <div class="text-center">
+                <strong>${locationName}</strong><br>
+                <div class="mt-2 p-2 rounded" style="background: ${fillColor}; color: white; font-weight: bold;">
+                    ${indexName} Index: ${value}/10
+                </div>
+                <small class="text-gray-600 mt-1 block">Level: ${level}</small><br>
+                <small>Center: ${cell.center.latitude.toFixed(4)}, ${cell.center.longitude.toFixed(4)}</small>`;
+        
+        if (weatherScore && weatherScore.closest_location !== 'Unknown') {
+            const distance = weatherScore.distance_to_station;
+            const distanceText = distance ? ` (${distance} miles away)` : '';
+            popupContent += `<br><small class="text-blue-600">Data from: ${closestLocation}${distanceText}</small>`;
+        }
+        
+        popupContent += `</div>`;
+        
+        polygon.bindPopup(popupContent);
+        
+        // Add to map and store reference
+        polygon.addTo(this.map);
+        this.gridCells.push({ polygon, value, type: indexType, weatherScore });
+    }
+
+    getProjectionColors(indexType, value) {
+        if (indexType === 'sunny') {
+            // Sunny index colors: More distinct color progression ending in light brown orange
+            if (value <= 3) {
+                return {
+                    color: '#991b1b',      // Very dark red border
+                    fillColor: '#dc2626',  // Dark red fill
+                    className: 'grid-cell-low'
+                };
+            } else if (value <= 5) {
+                return {
+                    color: '#c2410c',      // Dark orange border
+                    fillColor: '#ea580c',  // Orange fill
+                    className: 'grid-cell-medium'
+                };
+            } else if (value <= 7) {
+                return {
+                    color: '#a16207',      // Dark amber border
+                    fillColor: '#d97706',  // Amber fill
+                    className: 'grid-cell-medium'
+                };
+            } else {
+                return {
+                    color: '#92400e',      // Light brown border
+                    fillColor: '#d97706',  // Light brown orange fill
+                    className: 'grid-cell-high'
+                };
+            }
+        } else {
+            // Comfort index colors: blue (low) to green (high)
+            if (value <= 3) {
+                return {
+                    color: '#dc2626',      // Red border for very uncomfortable
+                    fillColor: '#ef4444',  // Red fill
+                    className: 'grid-cell-low'
+                };
+            } else if (value <= 5) {
+                return {
+                    color: '#2563eb',      // Blue border for uncomfortable
+                    fillColor: '#3b82f6',  // Blue fill
+                    className: 'grid-cell-medium'
+                };
+            } else if (value <= 7) {
+                return {
+                    color: '#0891b2',      // Cyan border for moderate
+                    fillColor: '#06b6d4',  // Cyan fill
+                    className: 'grid-cell-medium'
+                };
+            } else {
+                return {
+                    color: '#059669',      // Green border for comfortable
+                    fillColor: '#10b981',  // Green fill
+                    className: 'grid-cell-high'
+                };
+            }
+        }
+    }
+
+    getIndexLevel(value) {
+        if (value <= 3) return 'Poor';
+        if (value <= 5) return 'Fair'; 
+        if (value <= 7) return 'Good';
+        return 'Excellent';
+    }
+
+    showLegend(indexType) {
+        const legend = document.getElementById('indexLegend');
+        const legendContent = document.getElementById('legendContent');
+        
+        if (!legend || !legendContent) return;
+        
+        legendContent.innerHTML = '';
+        
+        let levels;
+        if (indexType === 'sunny') {
+            levels = [
+                { range: '1-3', level: 'Poor', value: 2 },
+                { range: '4-5', level: 'Fair', value: 4.5 },
+                { range: '6-7', level: 'Good', value: 6.5 },
+                { range: '8-10', level: 'Excellent', value: 9 }
+            ];
+        } else {
+            levels = [
+                { range: '1-3', level: 'Very Uncomfortable', value: 2 },
+                { range: '4-5', level: 'Uncomfortable', value: 4.5 },
+                { range: '6-7', level: 'Moderate', value: 6.5 },
+                { range: '8-10', level: 'Comfortable', value: 9 }
+            ];
+        }
+        
+        levels.forEach(item => {
+            const { fillColor } = this.getProjectionColors(indexType, item.value);
+            
+            const legendItem = document.createElement('div');
+            legendItem.className = 'legend-item';
+            legendItem.innerHTML = `
+                <div class="legend-color" style="background-color: ${fillColor};"></div>
+                <span>${item.level} (${item.range})</span>
+            `;
+            legendContent.appendChild(legendItem);
+        });
+        
+        legend.style.display = 'block';
+    }
+
+    hideLegend() {
+        const legend = document.getElementById('indexLegend');
+        if (legend) {
+            legend.style.display = 'none';
+        }
+    }
+
+    showClearButton() {
+        const clearButton = document.getElementById('clearProjectionButton');
+        if (clearButton) {
+            clearButton.style.display = 'block';
+        }
+    }
+
+    hideClearButton() {
+        const clearButton = document.getElementById('clearProjectionButton');
+        if (clearButton) {
+            clearButton.style.display = 'none';
+        }
+    }
+
+    setActiveButton(indexType) {
+        const sunnyButton = document.getElementById('projectSunnyButton');
+        const comfortButton = document.getElementById('projectComfortButton');
+        
+        // Remove active class from both buttons
+        if (sunnyButton) sunnyButton.classList.remove('active');
+        if (comfortButton) comfortButton.classList.remove('active');
+        
+        // Add active class to current button
+        if (indexType === 'sunny' && sunnyButton) {
+            sunnyButton.classList.add('active');
+        } else if (indexType === 'comfort' && comfortButton) {
+            comfortButton.classList.add('active');
+        }
+    }
+
+    clearActiveButtons() {
+        const sunnyButton = document.getElementById('projectSunnyButton');
+        const comfortButton = document.getElementById('projectComfortButton');
+        
+        if (sunnyButton) sunnyButton.classList.remove('active');
+        if (comfortButton) comfortButton.classList.remove('active');
+    }
+
+    clearProjection() {
+        this.gridCells.forEach(item => {
+            if (this.map.hasLayer(item.polygon)) {
+                this.map.removeLayer(item.polygon);
+            }
+        });
+        this.gridCells = [];
+        this.currentProjection = null;
+        this.hideLegend();
+        this.hideClearButton();
+        this.clearActiveButtons();
+    }
+
+    showProjectionLoading(indexType, show = true) {
+        const buttonId = indexType === 'sunny' ? 'projectSunnyButton' : 'projectComfortButton';
+        const textId = indexType === 'sunny' ? 'projectSunnyButtonText' : 'projectComfortButtonText';
+        const spinnerId = indexType === 'sunny' ? 'projectSunnyButtonSpinner' : 'projectComfortButtonSpinner';
+        
+        const button = document.getElementById(buttonId);
+        const buttonText = document.getElementById(textId);
+        const buttonSpinner = document.getElementById(spinnerId);
+        
+        if (show) {
+            if (button) button.classList.add('loading');
+            if (buttonText) buttonText.style.opacity = '0.7';
+            if (buttonSpinner) buttonSpinner.style.display = 'inline-block';
+        } else {
+            if (button) button.classList.remove('loading');
+            if (buttonText) buttonText.style.opacity = '1';
+            if (buttonSpinner) buttonSpinner.style.display = 'none';
+        }
+    }
+
+    updateBrowseResults(projectionData) {
+        const browseResults = document.getElementById('browseResults');
+        if (!browseResults) return;
+        
+        // Create summary information about the projection
+        const totalCells = projectionData.total_cells;
+        const indexType = projectionData.index_type;
+        const targetDate = projectionData.target_date;
+        const timeRange = projectionData.time_range;
+        
+        // Calculate statistics
+        const scores = projectionData.cells
+            .filter(cell => cell.weather_score && cell.weather_score.score > 0)
+            .map(cell => cell.weather_score.score);
+        
+        if (scores.length === 0) {
+            browseResults.innerHTML = `
+                <div class="text-center p-4 bg-red-50 rounded-lg border border-red-200">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-xl mb-2"></i>
+                    <h3 class="font-semibold text-red-800 mb-2">No Weather Data Available</h3>
+                    <p class="text-red-700 text-sm">
+                        No weather data found for the projected area on ${targetDate}.
+                    </p>
+                </div>
+            `;
+            return;
+        }
+        
+        const avgScore = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+        const maxScore = Math.max(...scores).toFixed(1);
+        const minScore = Math.min(...scores).toFixed(1);
+        
+        const indexName = indexType === 'sunny' ? 'Sunny' : 'Comfort';
+        const iconClass = indexType === 'sunny' ? 'fas fa-sun text-yellow-500' : 'fas fa-thermometer-half text-green-500';
+        
+        browseResults.innerHTML = `
+            <div class="bg-blue-50 rounded-lg border border-blue-200 p-4">
+                <div class="flex items-center mb-3">
+                    <i class="${iconClass} text-xl mr-2"></i>
+                    <h3 class="font-semibold text-blue-800">${indexName} Index Projection Results</h3>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <div class="text-blue-600 font-medium">Date & Time</div>
+                        <div class="text-blue-800">${targetDate}</div>
+                        <div class="text-blue-700">${timeRange}</div>
+                    </div>
+                    <div>
+                        <div class="text-blue-600 font-medium">Coverage</div>
+                        <div class="text-blue-800">${totalCells} grid cells</div>
+                        <div class="text-blue-700">${scores.length} with data</div>
+                    </div>
+                    <div>
+                        <div class="text-blue-600 font-medium">Score Range</div>
+                        <div class="text-blue-800">${minScore} - ${maxScore}</div>
+                        <div class="text-blue-700">Average: ${avgScore}</div>
+                    </div>
+                    <div>
+                        <div class="text-blue-600 font-medium">Best Areas</div>
+                        <div class="text-blue-800">${scores.filter(s => s >= 7).length} high scoring</div>
+                        <div class="text-blue-700">${scores.filter(s => s >= 5).length} moderate+</div>
+                    </div>
+                </div>
+                
+                <div class="mt-3 text-xs text-blue-600">
+                    💡 Click on any colored cell on the map for detailed weather information
+                </div>
+            </div>
+        `;
+    }
+
+    destroy() {
+        this.clearProjection();
+    }
+}
+
+// Set up projection buttons functionality
+function setupProjectionButtons() {
+    const projectSunnyButton = document.getElementById('projectSunnyButton');
+    const projectComfortButton = document.getElementById('projectComfortButton');
+    const clearProjectionButton = document.getElementById('clearProjectionButton');
+    
+    if (!projectSunnyButton || !projectComfortButton || !clearProjectionButton) {
+        console.warn('Projection buttons not found');
+        return;
+    }
+    
+    // Initialize weather projection manager
+    AppState.gridCellManager = new WeatherProjectionManager(AppState.map);
+    
+    // Project Sunny Index button
+    projectSunnyButton.addEventListener('click', async function() {
+        // Check if we have a starting location
+        if (!AppState.distanceCircleManager || !AppState.distanceCircleManager.center) {
+            Utils.showError('Please select a starting location first.', 'browseResults');
+            return;
+        }
+        
+        const center = AppState.distanceCircleManager.center;
+        const radius = AppState.distanceCircleManager.radius;
+        
+        AppState.gridCellManager.projectIndex('sunny', center.lat, center.lng, radius);
+    });
+    
+    // Project Comfort Index button
+    projectComfortButton.addEventListener('click', async function() {
+        // Check if we have a starting location
+        if (!AppState.distanceCircleManager || !AppState.distanceCircleManager.center) {
+            Utils.showError('Please select a starting location first.', 'browseResults');
+            return;
+        }
+        
+        const center = AppState.distanceCircleManager.center;
+        const radius = AppState.distanceCircleManager.radius;
+        
+        AppState.gridCellManager.projectIndex('comfort', center.lat, center.lng, radius);
+    });
+    
+    // Clear projection button
+    clearProjectionButton.addEventListener('click', function() {
+        AppState.gridCellManager.clearProjection();
+    });
+}
+
 // Initialize application
 function init() {
     initializeMap();
     setupDateSelector();
     setupLocationAutocomplete();
     setupFormSubmission();
+    setupProjectionButtons();
+    setupModeTabsNavigation();
     
     // Ensure form container is properly positioned
     setTimeout(ensureFormContainerInViewport, 100);
@@ -893,6 +1556,12 @@ function cleanup() {
     if (AppState.distanceCircleManager) {
         AppState.distanceCircleManager.destroy();
         AppState.distanceCircleManager = null;
+    }
+    
+    // Clean up grid cell manager
+    if (AppState.gridCellManager) {
+        AppState.gridCellManager.destroy();
+        AppState.gridCellManager = null;
     }
     
     // Clean up map markers
