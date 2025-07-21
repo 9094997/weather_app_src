@@ -115,24 +115,20 @@ def cleanup_weather_data():
         except Exception as e:
             print(f"Error cleaning up {OUTPUT_FILE}: {str(e)}")
 
-def save_weather_data(weather_data):
-    """Save weather data to JSON file"""
+def save_weather_data(weather_data, file_path='weather_data.json', create_backup=False):
+    """Save weather data to JSON file with optional backup"""
     try:
-        # Clear the existing file by writing an empty structure
-        empty_data = {
-            "grid_size_miles": 8,
-            "total_cells": 0,
-            "weather_data": [],
-            "generated_at": datetime.now().isoformat()
-        }
+        # Create backup if requested
+        if create_backup and os.path.exists(file_path):
+            import shutil
+            backup_path = file_path + '.backup'
+            shutil.copy2(file_path, backup_path)
+            print(f"Created backup: {backup_path}")
         
-        with open('weather_data.json', 'w', encoding='utf-8') as f:
-            json.dump(empty_data, f, indent=2)
-        
-        # Now write the new data
-        with open('weather_data.json', 'w', encoding='utf-8') as f:
-            json.dump(weather_data, f, indent=2)
-        print("Weather data saved successfully")
+        # Save the data
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(weather_data, f, indent=2, ensure_ascii=False)
+        print(f"Weather data saved successfully to {file_path}")
     except Exception as e:
         print(f"Error saving weather data: {str(e)}")
 
@@ -207,12 +203,10 @@ def main():
         'generated_at': datetime.utcnow().isoformat()
     }
     
-    # Use the output file path from config
+    # Use the consolidated save_weather_data function
     output_path = os.path.join(os.path.dirname(__file__), OUTPUT_FILE)
-    with open(output_path, 'w') as file:
-        json.dump(output_data, file, indent=2)
+    save_weather_data(output_data, output_path, create_backup=True)
     
-    print(f"Weather data has been processed and saved to {OUTPUT_FILE}")
     print(f"Successfully processed {len(processed_weather_data)} locations")
 
 if __name__ == "__main__":

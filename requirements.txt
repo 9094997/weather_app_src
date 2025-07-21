@@ -6,21 +6,17 @@ Flask==2.3.3
 # HTTP Requests
 requests==2.31.0
 
-# Data Processing
-pandas==2.1.1
-numpy==1.24.3
-
-# Geospatial Libraries
+# Essential Geospatial Libraries
 geopy==2.4.0
-pyproj==3.6.1
-shapely==2.0.2
-geopandas==0.14.0
 
-# Visualization
-matplotlib==3.7.2
-
-# Progress Bars
-tqdm==4.66.1
+# Optional Dependencies for Map Generation (only needed for location.py)
+# pandas==2.1.1
+# numpy==1.24.3
+# pyproj==3.6.1
+# shapely==2.0.2
+# geopandas==0.14.0
+# matplotlib==3.7.2
+# tqdm==4.66.1
 
 # Development and Testing (optional)
 # pytest==7.4.2
