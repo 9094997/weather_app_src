@@ -76,20 +76,20 @@
                 <label class="block text-gray-700 text-sm font-bold mb-2">Travel Hours:</label>
                 <div class="time-range-container">
                   <div id="time-range-slider"></div>
-                  <div class="flex justify-between mt-2">
+                  <!-- <div class="flex justify-between mt-2">
                     <span id="start-time-label"></span>
                     <span id="end-time-label"></span>
-                  </div>
-                  <input type="hidden" id="start-hour" name="start_hour" value="8">
-                  <input type="hidden" id="end-hour" name="end_hour" value="20">
+                  </div> -->
+                  <input type="hidden" id="start-hour" name="start_hour" value="12">
+                  <input type="hidden" id="end-hour" name="end_hour" value="16">
                 </div>
             </div>
             
             <div>
                 <label class="block text-gray-700 text-sm font-bold mb-2">
-                    Maximum Distance: <span id="distanceValue">200</span> miles
+                    Maximum Distance: <span id="distanceValue">50</span> miles
                 </label>
-                <input type="range" id="distance" min="1" max="200" value="200" step="1"
+                <input type="range" id="distance" min="1" max="200" value="50" step="1"
                     class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
             </div>
             
@@ -181,7 +181,7 @@
       hours.push(i.toString().padStart(2, '0') + ':00');
     }
     noUiSlider.create(slider, {
-      start: [8, 20],
+      start: [12, 16],
       connect: true,
       step: 1,
       range: {
@@ -191,7 +191,10 @@
       tooltips: [true, true],
       format: {
         to: value => hours[Math.round(value) - 8],
-        from: value => hours.indexOf(value) + 8
+        from: value => {
+          const hourStr = value.toString().padStart(2, '0') + ':00';
+          return hours.indexOf(hourStr) + 8;
+        }
       }
     });
     slider.noUiSlider.on('update', function(values, handle, unencoded) {
@@ -215,6 +218,13 @@
         slider.noUiSlider.set([start, end]);
       }
     });
+    
+    // Initialize labels on page load
+    const initialValues = slider.noUiSlider.get();
+    const start = Math.round(initialValues[0]);
+    const end = Math.round(initialValues[1]);
+    startLabel.textContent = hours[start - 8];
+    endLabel.textContent = hours[end - 8];
     </script>
 </body>
 </html>

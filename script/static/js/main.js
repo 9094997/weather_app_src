@@ -254,7 +254,7 @@ class DistanceCircleManager {
         this.map = map;
         this.circle = null;
         this.center = null;
-        this.radius = 200; // miles
+        this.radius = 50; // miles
         this.handleMarker = null;
         this.isDragging = false;
         this.init();
