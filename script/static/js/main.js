@@ -882,22 +882,22 @@ function renderDestinations(destinations, type) {
     });
     
     // Add scroll to top button if there are many results
-    if (destinations.length > 15) {
-        const scrollToTopBtn = document.createElement('button');
-        scrollToTopBtn.className = 'fixed bottom-4 right-4 bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition-colors z-50';
-        scrollToTopBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
-        scrollToTopBtn.title = 'Scroll to top';
-        scrollToTopBtn.onclick = () => {
-            const formContainer = document.querySelector('.form-container');
-            if (formContainer) {
-                formContainer.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        };
-        document.body.appendChild(scrollToTopBtn);
+    // if (destinations.length > 15) {
+    //     const scrollToTopBtn = document.createElement('button');
+    //     scrollToTopBtn.className = 'fixed bottom-4 right-4 bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition-colors z-50';
+    //     scrollToTopBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+    //     scrollToTopBtn.title = 'Scroll to top';
+    //     scrollToTopBtn.onclick = () => {
+    //         const formContainer = document.querySelector('.form-container');
+    //         if (formContainer) {
+    //             formContainer.scrollTo({ top: 0, behavior: 'smooth' });
+    //         }
+    //     };
+    //     document.body.appendChild(scrollToTopBtn);
         
-        // Store reference for cleanup
-        AppState.scrollToTopBtn = scrollToTopBtn;
-    }
+    //     // Store reference for cleanup
+    //     AppState.scrollToTopBtn = scrollToTopBtn;
+    // }
 }
 
 // Ensure form container stays within viewport
