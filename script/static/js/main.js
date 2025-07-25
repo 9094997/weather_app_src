@@ -540,7 +540,7 @@ function setupFormSubmission() {
             if (error.name === 'AbortError') {
                 Utils.showError('Request timed out. Please try again.', errorContainer);
             } else {
-                Utils.showError('An error occurred while searching for destinations. Please try again.', errorContainer);
+                console.error('An error occurred while searching for destinations. Please try again.', errorContainer);
             }
         } finally {
             Utils.showLoading(false);
