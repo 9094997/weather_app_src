@@ -581,4 +581,4 @@ def batch_calculate_scores(cells_with_locations: List[Dict], index_type: str, ta
 LOCATION_INDEX = build_location_index(WEATHER_DATA)
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=80, debug=True)
