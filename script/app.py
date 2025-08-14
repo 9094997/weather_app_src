@@ -90,10 +90,6 @@ GRID_BOUNDARIES = load_grid_boundaries()
 
 @app.route('/')
 def home():
-    global WEATHER_DATA, GRID_BOUNDARIES
-    WEATHER_DATA = load_weather_data()
-    GRID_BOUNDARIES = load_grid_boundaries()
-    
     return render_template('index.html')
 
 @app.route('/location-suggest')
