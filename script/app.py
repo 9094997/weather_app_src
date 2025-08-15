@@ -6,11 +6,11 @@ import sys
 from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut
-import math
 import numpy as np
 from functools import lru_cache
 from typing import Tuple, Dict, Any, List
 import time
+import threading
 
 # Add the score_system directory to the path
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -84,9 +84,32 @@ def get_cells_within_radius(center_lat, center_lon, radius_miles, grid_data):
     
     return cells_in_radius
 
+
+def auto_refresh():
+    """Background function that runs the weather monitor and checks time"""
+    while True:
+        current_time = datetime.now()
+        global WEATHER_DATA
+        
+        if current_time.hour == 3 and current_time.minute == 10:
+            print(f"[{current_time.strftime('%Y-%m-%d %H:%M:%S')}] Weather data reloaded at 3:10 AM")
+            WEATHER_DATA = load_weather_data()
+        else:
+            # Print statement every 3 hours (0, 3, 6, 9, 12, 15, 18, 21)
+            if current_time.hour % 3 == 0 and current_time.minute == 0:
+                print(f"[{current_time.strftime('%Y-%m-%d %H:%M:%S')}] Weather data check - next reload at 3:10 AM")
+        
+        time.sleep(60)  # Check every minute
+
+
 # Load the weather data and grid boundaries
 WEATHER_DATA = load_weather_data()
 GRID_BOUNDARIES = load_grid_boundaries()
+
+# Start the background weather monitor thread
+weather_monitor_thread = threading.Thread(target=auto_refresh, daemon=True)
+weather_monitor_thread.start()
+
 
 @app.route('/')
 def home():
