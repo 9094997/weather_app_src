@@ -91,7 +91,8 @@ def auto_refresh():
         current_time = datetime.now()
         global WEATHER_DATA
         
-        if current_time.hour == 3 and current_time.minute == 10:
+        if current_time.hour == 3 and current_time.minute == 20:
+            ## reload the weather json at 3:20 am to give the server sufficient time to download the json
             print(f"[{current_time.strftime('%Y-%m-%d %H:%M:%S')}] Weather data reloaded at 3:10 AM")
             WEATHER_DATA = load_weather_data()
         else:
