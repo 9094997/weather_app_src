@@ -38,13 +38,6 @@ def load_weather_data(file_path: str) -> Dict[str, Any]:
 def save_weather_data(data: Dict[str, Any], file_path: str) -> None:
     """Save weather data to JSON file."""
     try:
-        # Create backup of original file
-        backup_path = file_path + '.backup'
-        if os.path.exists(file_path):
-            import shutil
-            shutil.copy2(file_path, backup_path)
-            print(f"Created backup: {backup_path}")
-        
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         print(f"Successfully updated {file_path}")
