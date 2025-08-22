@@ -156,6 +156,24 @@ def calculate_destination_sunny_score(location_data, target_date, start_hour=9, 
     
     return None
 
+def remove_duplicate_cities(destinations):
+    """
+    Remove duplicate cities, keeping the one with the highest sunny score.
+    Returns a list with unique cities only.
+    """
+    city_groups = {}
+    
+    for dest in destinations:
+        # Create a unique key for each city (name + region + country)
+        city_key = f"{dest['city']}_{dest['region']}_{dest['country']}"
+        
+        # If this city doesn't exist yet, or if this entry has a better score
+        if city_key not in city_groups or dest['sunny_score'] > city_groups[city_key]['sunny_score']:
+            city_groups[city_key] = dest
+    
+    # Return the deduplicated list
+    return list(city_groups.values())
+
 def get_top_sunny_destinations(weather_data, target_date, start_hour=9, end_hour=17, max_distance=None, start_coords=None):
     """
     Get top 30 destinations with highest sunny scores.
@@ -219,9 +237,12 @@ def get_top_sunny_destinations(weather_data, target_date, start_hour=9, end_hour
                 'max_temp': round(max_temp, 1)
             })
     
+    # Remove duplicate cities before sorting and limiting to top 30
+    unique_destinations = remove_duplicate_cities(destinations)
+    
     # Sort by sunny score (highest first) and return top 30
-    destinations.sort(key=lambda x: x['sunny_score'], reverse=True)
-    return destinations[:30]
+    unique_destinations.sort(key=lambda x: x['sunny_score'], reverse=True)
+    return unique_destinations[:30]
 
 # # Example batch
 # data = [
